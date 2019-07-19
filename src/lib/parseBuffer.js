@@ -169,18 +169,25 @@ function wrapPayload(payload) {
   ]);
 };
 
+<<<<<<< HEAD
 //获取SN码
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 function SNPacket() {
   const cmd = Buffer.from([0x00, 0x00, 0x00, 0x00, 0xe0]);
   return wrapPayload(cmd);
 }
 
+<<<<<<< HEAD
 //获取版本信息
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 function versionPacket() {
   const cmd = Buffer.from([0x00, 0x01, 0x00, 0x00, 0xe1]);
   return wrapPayload(cmd);
 }
 
+<<<<<<< HEAD
 //唤醒设备
 function awakeDevice() {
   const cmd = Buffer.from([0x00, 0x02, 0x00, 0x00, 0x11, 0x00]);
@@ -190,10 +197,20 @@ function awakeDevice() {
 //获取更新时间
 function updateData() {
   const cmd = Buffer.from([0x00, 0x03, 0x00, 0x00, 0xe2, 0x00]);
+=======
+function awake() {
+  const cmd = Buffer.from([0x00, 0x02, 0x04, 0x00, 0x11]);
+  return wrapPayload(cmd);
+}
+
+function updateData() {
+  const cmd = Buffer.from([0x00, 0x03, 0x04, 0x00, 0xe2]);
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
   return wrapPayload(cmd);
 }
 
 
+<<<<<<< HEAD
 //设置电压
 function setVolt() {
   const cmd = Buffer.from([0x00, 0x04, 0x00, 0x01, 0x02, 0x00]);
@@ -224,11 +241,14 @@ function setFrequency() {
   return wrapPayload(cmd); 
 }
 
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 export default {
   consoleBuffer,
   push,
   SNPacket,
   versionPacket,
+<<<<<<< HEAD
   awakeDevice,
   updateData,
   setVolt,
@@ -236,5 +256,9 @@ export default {
   setAlarmClock,
   setDeviceState,
   setFrequency,
+=======
+  awake,
+  updateData,
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 };
 

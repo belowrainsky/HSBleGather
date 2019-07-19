@@ -22,16 +22,23 @@ import {
   Separator,
 } from 'native-base';
 
+<<<<<<< HEAD
 import { NavigationEvents } from 'react-navigation';
+=======
+import { NavigationEvents, withNavigationFocus  } from 'react-navigation';
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 import parseBuffer from '../../lib/parseBuffer';
 import { connect } from 'react-redux';
 import styles from "./styles";
 import { Buffer } from 'buffer';
 import openRealm from '../../lib/realmStorage';
 import moment from 'moment';
+<<<<<<< HEAD
 import {
   disconnectDevice,
 } from '../../actions/bleAction';
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 
 let HSBleManager;
 
@@ -48,6 +55,7 @@ class ManualGather extends React.Component {
 			channel: [],			
 		};
 		HSBleManager = global.HSBleManager;
+<<<<<<< HEAD
 	}
 
 	didFocus(){
@@ -69,6 +77,17 @@ class ManualGather extends React.Component {
       });
   	}
 
+=======
+
+		const didFocusSubscription = this.props.navigation.addListener(
+			'didFocus'	,
+			payload => {
+				console.debug('didFocus', payload);
+			}
+		);
+	}
+
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 	componentDidMount() {
 		if (!this.props.connectedDevice) {
 	      Alert.alert(
@@ -83,7 +102,11 @@ class ManualGather extends React.Component {
 	        HSBleManager.monitor(this.monitorListener)
 	      });
 	    }
+<<<<<<< HEAD
 	}	
+=======
+	}
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 
 	monitorListener = (err, characteristic) => {
 	    if (err) {
@@ -91,7 +114,10 @@ class ManualGather extends React.Component {
 	      switch (err.errorCode) {
 	        case 201:
 	          this.showToast('监听失败 设备已断开');
+<<<<<<< HEAD
 	          this.props.disconnectDevice();
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 	          break;
 	        case 205:
 	          this.showToast('监听失败 设备未连接');
@@ -100,6 +126,7 @@ class ManualGather extends React.Component {
 	          this.showToast(`监听失败 ${err.errorCode}`);
 	      }
 	    } else {
+<<<<<<< HEAD
 	    	// const buffer = Buffer.from(characteristic.value, 'base64');
       // 		const result = parseBuffer.push(buffer);
       // 		if (result) {
@@ -128,6 +155,26 @@ class ManualGather extends React.Component {
 		
 		HSBleManager.negotiateMtu().then(() => {
 	        HSBleManager.write(parseBuffer.awakeDevice(), 2);	        
+=======
+	    	const buffer = Buffer.from(characteristic.value, 'base64');
+      		const result = parseBuffer.push(buffer);
+      		if (result) {
+      			console.log(`收到数据为：${result}`);
+      		}
+	    }
+	}
+
+	componentWillUnmount() {
+		HSBleManager.unmonitor();
+		this.setState = (state, callback) => {
+      		return;
+   		 };	
+	}
+
+	getData() {
+		HSBleManager.negotiateMtu().then(() => {
+	        HSBleManager.write(parseBuffer.awake(), 2);
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 	        HSBleManager.read();
 	        HSBleManager.write(parseBuffer.updateData(), 2);
 	        HSBleManager.read();
@@ -145,9 +192,12 @@ class ManualGather extends React.Component {
 	render(){
 		return(
 			<Container>
+<<<<<<< HEAD
 				<NavigationEvents
           			onDidFocus={() => this.didFocus()}         
         		/>
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 				<Header>
 					<Left style={{flex: 1}}>
 						<Button transparent onPress={() => this.props.navigation.goBack()}>	
@@ -278,6 +328,7 @@ const mapStateToProps = (state) => {
     connectedDevice: state.bles.connectedDevice,
   };
 };
+<<<<<<< HEAD
 const mapDispatchToProps = (dispatch) => {
   return {       
     disconnectDevice: () => dispatch(disconnectDevice()),
@@ -285,3 +336,8 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(ManualGather);
+=======
+
+
+export default connect(mapStateToProps, null)(ManualGather);
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7

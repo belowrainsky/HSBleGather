@@ -14,11 +14,15 @@ import{
 import DeviceMsg from './src/screens/DeviceMsg';
 import ManualGather from './src/screens/ManualGather';
 import HistoryData from './src/screens/HistoryData';
+<<<<<<< HEAD
 
 import Bluetooth from './src/screens/Bluetooth';
 import ManualConnect from './src/screens/Bluetooth/manualConnect';
 import QRCodeConnect from './src/screens/Bluetooth/qrcodeConnect';
 
+=======
+import ManualConnect from './src/screens/Bluetooth';
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 import Home from './src/screens/Home';
 
 import {Root, StyleProvider} from 'native-base';
@@ -34,9 +38,13 @@ const AppNavigator = createStackNavigator(
     DeviceMsg: {screen: DeviceMsg},
     ManualGather: {screen: ManualGather},
     HistoryData: {screen: HistoryData},
+<<<<<<< HEAD
     Bluetooth : {screen: Bluetooth},
     ManualConnect: {screen: ManualConnect},
     QRCodeConnect: {screen: QRCodeConnect},    
+=======
+    ManualConnect: {screen: ManualConnect},
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
   },
   {
   	initialRouteName:'Home',  

@@ -234,6 +234,7 @@ class HsBleManager {
   destroy() {
     this.manager.destroy();
   }
+<<<<<<< HEAD
 
   isDeviceConnected() {
     if(HSBleManager.manager.isDeviceConnected(this.peripheralId)){      
@@ -242,6 +243,8 @@ class HsBleManager {
       return false;
     }
   }
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 }
 
 export default HsBleManager;

@@ -18,18 +18,22 @@ import {
 } from "native-base";
 import styles from "./styles";
 
+<<<<<<< HEAD
 import { connect } from 'react-redux';
 import {    
   disconnectDevice,
 } from '../../actions/bleAction';
 import { NavigationEvents } from 'react-navigation';
 
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 const huasilogo = require('./huasi.png');
 const bluetooth = require('./bluetooth.png');
 const manual = require('./Manual.png');
 const history = require('./HistoryGather.png');
 const deviceInfor = require('./DeviceMsg.png');
 
+<<<<<<< HEAD
 let HSBleManager;
 
 class Home extends React.Component {
@@ -82,6 +86,12 @@ class Home extends React.Component {
         <NavigationEvents
             onDidFocus={() => this.didFocus()}         
         />
+=======
+class Home extends React.Component {
+  render() {
+    return (
+      <Container style={styles.container}>
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
         <Header>
           <Left style={{flex:1}}/>
           <Body style={{flex: 2, alignItems: 'center'}}>
@@ -94,12 +104,20 @@ class Home extends React.Component {
           <View style={styles.touchableContainer}>
             <TouchableOpacity
               style={styles.touchable}
+<<<<<<< HEAD
               onPress={() => this.props.navigation.push('Bluetooth')}
+=======
+              onPress={() => this.props.navigation.navigate('ManualConnect')}
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
             >
               <Image source={bluetooth} style={styles.image} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.touchable}
+<<<<<<< HEAD
               onPress={() => this.props.navigation.push('DeviceMsg')}
+=======
+              onPress={() => this.props.navigation.navigate('DeviceMsg')}
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
             >
               <Image source={deviceInfor} style={styles.image} />
             </TouchableOpacity>
@@ -108,13 +126,21 @@ class Home extends React.Component {
           <View style={styles.touchableContainer}>
             <TouchableOpacity
               style={styles.touchable}
+<<<<<<< HEAD
               onPress={() => this.props.navigation.push('ManualGather')}
+=======
+              onPress={() => this.props.navigation.navigate('ManualGather')}
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
             >
               <Image source={manual} style={styles.image} />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.touchable}
+<<<<<<< HEAD
               onPress={() => this.props.navigation.push('HistoryData')}
+=======
+              onPress={() => this.props.navigation.navigate('HistoryData')}
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
             >
               <Image source={history} style={styles.image} />
             </TouchableOpacity>            
@@ -131,6 +157,7 @@ class Home extends React.Component {
   }
 }
 
+<<<<<<< HEAD
 const mapDispatchToProps = (dispatch) => {
   return {    
     disconnectDevice: () => dispatch(disconnectDevice()),
@@ -138,3 +165,6 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 export default connect(null, mapDispatchToProps)(Home);
+=======
+export default Home;
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7

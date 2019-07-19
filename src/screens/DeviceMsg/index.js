@@ -24,9 +24,12 @@ import {
 import parseBuffer from '../../lib/parseBuffer';
 import { connect } from 'react-redux';
 import { NavigationEvents } from 'react-navigation';
+<<<<<<< HEAD
 import {
   disconnectDevice,
 } from '../../actions/bleAction';
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 
 let HSBleManager;
 
@@ -45,6 +48,7 @@ class DeviceMsg extends React.Component {
 			systemTime: '',
 		};
 		HSBleManager = global.HSBleManager;
+<<<<<<< HEAD
 	}	
 
 	componentWillMount() {
@@ -89,11 +93,19 @@ class DeviceMsg extends React.Component {
 
 	showAlert() {
 		Alert.alert(
+=======
+	}
+
+	componentDidMount() {
+	    if (!this.props.connectedDevice) {
+	      Alert.alert(
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 	        '提示',
 	        '蓝牙未连接测斜仪，请先设置',
 	        [
 	          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
 	        ],
+<<<<<<< HEAD
 	     );
 	}
 
@@ -114,6 +126,19 @@ class DeviceMsg extends React.Component {
     });
   }
 
+=======
+	      );
+	    } else {
+	      HSBleManager.negotiateMtu().then(() => {
+	        HSBleManager.write(parseBuffer.awake(), 2);
+	        HSBleManager.read();
+	        HSBleManager.write(parseBuffer.updateData(), 2);
+	        HSBleManager.read();
+	      });
+	    }
+	}
+
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 	render(){
 		return(
 			<Container>
@@ -173,9 +198,13 @@ class DeviceMsg extends React.Component {
 					</View>
 					<View style={{marginTop: 50}}>
 						<Button block rounded info 
+<<<<<<< HEAD
 							style={{height: 80, marginLeft: 5, marginRight: 5}}
 							onPress={() => this.setSysInfo()}
 						>							
+=======
+							style={{height: 80, marginLeft: 5, marginRight: 5}}>							
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
 							<Text style={{fontSize: 40, color: 'white'}}>设置</Text>
 						</Button>
 					</View>
@@ -187,6 +216,7 @@ class DeviceMsg extends React.Component {
 
 const mapStateToProps = (state) => {
   return {
+<<<<<<< HEAD
     connectedDevice: state.bles.connectedDevice,    
   };
 };
@@ -198,3 +228,11 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(DeviceMsg);
+=======
+    connectedDevice: state.bles.connectedDevice,
+  };
+};
+
+
+export default connect(mapStateToProps, null)(DeviceMsg);
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
