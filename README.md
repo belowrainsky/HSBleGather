@@ -9,22 +9,13 @@
 
 #### 安装教程
 
-1. xxxx
-2. xxxx
-3. xxxx
+1. yarn add
+或者 npm install
 
 #### 使用说明
 
-1. xxxx
-2. xxxx
-3. xxxx
+1. 主要实现连接蓝牙和获取蓝牙信息的功能
 
-#### 参与贡献
-
-1. Fork 本仓库
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
 
 
 #### 码云特技
