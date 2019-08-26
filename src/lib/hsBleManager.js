@@ -223,7 +223,10 @@ class HsBleManager {
       const device = await this.manager.cancelDeviceConnection(this.peripheralId);
       log(`蓝牙断开成功 ${device.id}`);
       log(`外部Id：${this.peripheralId}`);
+<<<<<<< HEAD
       this.peripheralId = null;
+=======
+>>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
       return Promise.resolve();
     } catch (err) {
       log(`蓝牙断开失败 ${err}`);
@@ -235,6 +238,10 @@ class HsBleManager {
   destroy() {
     this.manager.destroy();
   }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 
   isDeviceConnected() {
     if(HSBleManager.manager.isDeviceConnected(this.peripheralId)){      
@@ -243,6 +250,11 @@ class HsBleManager {
       return false;
     }
   }
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
+>>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 }
 
 export default HsBleManager;

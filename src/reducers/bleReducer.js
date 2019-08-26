@@ -55,7 +55,11 @@ function bleReducer(state = initialState, action) {
     const map = new Map(state.deviceMap);
     if (state.connectedDevice) {
       map.set(state.connectedDevice.id, state.connectedDevice);
+<<<<<<< HEAD
     }    
+=======
+    }
+>>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
     return Object.assign({}, state, {
       deviceMap: map,      
       devices: [...map.values()],
