@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React from 'react';
 import {
   View, 
@@ -46,16 +45,18 @@ class DeviceMsg extends React.Component {
 		this.state = {
 			SN: '',
 			deviceType: '',			
-			deviceVolt: '',
+			deviceVolt: 0.0,
 			gatherFunc: '',
 			networkFunc: '',
-			networkQuality: '',
-			gatherFre: '',
-			systemTime: '',
-			isSetBtnClick: false,
-			timeType: 'minute',		
+			networkQuality: 0,
+			gatherFre: '',	//监测间隔
+			systemTime: '',			
+			timeType: 'minute',	//时间类型：minute 或 hour	
+			
 			realm: null,
-			devsVersion: null,					
+			setMsg: null,	
+			isSetBtnClick: false,
+			hasDevMsg: false,				
 		};
 		HSBleManager = global.HSBleManager;
 	}	
@@ -71,28 +72,47 @@ class DeviceMsg extends React.Component {
 
 	componentDidMount() {
    		if (!this.props.connectedDevice) {
-	      Alert.alert(
-	        '提示',
-	        '蓝牙未连接渗压计，请先设置',
-	        [
-	          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
-	        ],
-	      );
-	      openRealm().then((realm) => {
-	      	const devs = realm.objects('devsVersion').filtered('id == 0')[0];
-	      	this.setState({ devsVersion: devs, realm: realm });
-	      });
-	    }
-	    this.setState({
-	    	SN: this.state.SN,
-			deviceType: this.state.deviceType,			
-			deviceVolt: this.state.deviceVolt,
-			gatherFunc: this.state.gatherFunc,
-			networkFunc: this.state.networkFunc,
-			networkQuality: this.state.networkQuality,
-			gatherFre: this.state.gatherFre,
-			systemTime: this.state.systemTime,
-	    });  
+		      Alert.alert(
+		        '提示',
+		        '蓝牙未连接渗压计，请先设置',
+		        [
+		          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
+		        ],
+		      );
+		      openRealm().then((realm) => {
+			    this.setState({ realm });
+			  });			      		     
+	    }else {	    	
+			try{
+		      openRealm().then((realm) => {
+		      	// const deviceName = this.props.connectedDevice.name.toString();
+		      	const deviceName = 'HS32204J70000';
+		      	const devs = realm.objects('setMsg').filtered('devNo == $0', deviceName)[0];	      	
+		      	if(devs) {	      		
+		      		this.setState({
+		      			SN: devs.devNo,
+		      			deviceType: devs.devType,
+		      			deviceVolt: devs.volt,
+		      			gatherFunc: devs.gatherFunc,
+		      			networkFunc: devs.DtuFunc,
+		      			networkQuality: devs.Csq,	      			
+		      			systemTime: devs.time,  
+
+		      			gatherFre: devs.interval.toString(),
+		      			timeType: devs.intervalType,
+		      		});
+			      		this.setState({ setMsg: devs, realm });
+			      		console.log(`-找到设备数据-`);
+			      	}else {
+			      		this.setState({ realm });
+			      		console.log(`没有找到设备数据`);
+			      	}
+			      	console.log(`----打开数据库---`);
+			     });
+		      }catch(err){
+		      	this.showToast(`获取设备信息错误：${err}`);
+		      }
+		    }	        	       
  	}
 
  	componentWillUnmount() {
@@ -101,9 +121,9 @@ class DeviceMsg extends React.Component {
  		this.getDeviceMsgTimer && clearTimeout(this.getDeviceMsgTimer); 		
  		this.monitorListener && clearTimeout(this.monitorListener);
  		
- 		// this.setState = (state, callback) => {
-   //    		return;
-   // 		};
+ 		this.setState = (state, callback) => {
+      		return;
+   		};
  	} 
 
  	monitorListener = (err, characteristic) => {
@@ -123,7 +143,7 @@ class DeviceMsg extends React.Component {
 	    } else {
 
       		const buffer = Buffer.from(characteristic.value, 'base64');  
-      		const result = parseBuffer.push(buffer, true);    	     		
+      		const result = parseBuffer.push2parse(buffer);    	     		
       		 
       		if(result){
       			if(result.sn){
@@ -142,15 +162,15 @@ class DeviceMsg extends React.Component {
 	      			this.setState({      				
 	      				SN: `${snNo}`, 
 	      				deviceType: type,	
-	      			});      	
+	      			});
 	      		}
 	      		if(result.volt){
 	      			const volt = result.volt;
 	      			this.setState({      				
-	      				deviceVolt: `${volt}`,     				
+	      				deviceVolt: volt,			
 	      			});      	
 	      		}
-	      		if(result.frequency){
+	      		if(result.frequency){//监测间隔
 	      			let gatherFre = result.frequency;	 
 	      			if(gatherFre >= 60){
 	      				gatherFre = gatherFre / 60;
@@ -159,31 +179,38 @@ class DeviceMsg extends React.Component {
 	      				this.setState({timeType: 'minute'});
 	      			}
 	      			this.setState({      				
-	      				gatherFre: `${gatherFre}`,    				
+	      				gatherFre: `${gatherFre}`,
 	      			});      	
 	      		}
 	      		if(result.SysTime){
 	      			const systemTime = result.SysTime;
 	      			this.setState({      				
-	      				systemTime: `${systemTime}`,   				
+	      				systemTime: `${systemTime}`,
+	      				hasDevMsg: true,   				
 	      			});      	
 	      		}
-	      		if(result.state && this.state.isSetBtnClick){
+	      		if(result.state){
 	      			const state = result.state;
 	      			
 	      			if(state === 22){
 	      				this.showToast('写入命令失败!');	      				
 	      			}else if(state === 23){
-	      				this.showToast('设置成功');
+	      				this.showToast('唤醒成功');
 	      			}else if(state === 18){
 	      				this.showToast('设备休眠...');
 	      			}else if(state === 19){
 	      				this.showToast('设备繁忙...');
+	      			}else if(state === 23 && this.state.isSetBtnClick){
+	      				this.showToast('设置成功');
+	      				this.setMsgTbl(result);
+	      			}else if(state === 22 && this.state.isSetBtnClick){
+	      				this.setState({ isSetBtnClick: false });
 	      			}
+
 	      		}  
 	      		if(result.dtuCsq) {
 	      			console.log(`网络通信质量：${result.dtuCsq}`);
-	      			const dtuCsq = result.dtuCsq;
+	      			const dtuCsq = parseInt(result.dtuCsq);
 	      			this.setState({
 	      				networkQuality: dtuCsq,
 	      			});
@@ -193,8 +220,91 @@ class DeviceMsg extends React.Component {
 	      			console.log(`模块状态：${modelStatus}`);
 	      			this.matchWhichStat(modelStatus);	      				      	
 	      		}
+
+	      		this.setMsgTbl(result);
+	      		
+	      		// if(result.sn && result.frequency && result.sysTime && result.dtuCsq && result.modelStatus){
+	      		// 	const { realm, setMsg } = this.state;
+	      		// 	realm.write(() => {
+	      		// 		const devType = this.state.deviceType;
+	      		// 		const devNo = this.state.SN;
+	      		// 		const volt = this.state.deviceVolt;	      		
+	      		// 		const gatherFunc = this.state.gatherFunc;
+	      		// 		const DtuFunc = this.state.networkFunc;
+	      		// 		const Csq = this.state.networkQuality;
+	      		// 		const interval = this.state.gatherFre;
+	      		// 		const intervalType = this.state.timeType;
+	      		// 		const id = 1;
+	      		// 		if(setMsg === null){
+	      		// 			realm.create('setMsg', {id, devType, devNo, volt, gatherFunc, DtuFunc, Csq, interval, intervalType});
+	      		// 		}else {
+	      		// 			setMsg.devType = devType;
+	      		// 			setMsg.devNo = devNo;
+	      		// 			setMsg.volt = volt;
+	      		// 			setMsg.gatherFunc = gatherFunc;
+	      		// 			setMsg.DtuFunc = DtuFunc;
+	      		// 			setMsg.Csq = Csq;
+	      		// 			setMsg.interval = interval;
+	      		// 			setMsg.intervalType = intervalType;
+	      		// 		}	      				
+	      		// 	});
+	      		// }
       		}      		   		
 	    }
+	}
+
+//设置设备信息到数据库
+	setMsgTbl(result) {
+		try{
+			if(result.sn && result.frequency && result.SysTime && result.dtuCsq && result.modelStatus){
+	  			let realm = this.state.realm;	  			
+
+  				if(realm === null){
+  					openRealm().then((realm) => {
+  						this.setState({ realm });
+  					});
+  				}
+	  			realm.write(() => {	
+	  				// const devNo = this.state.SN;
+		  			const devNo = 'HS32204J70000';
+		  			const devType = this.state.deviceType;	  
+		  			console.log(`设备型号111： ${devType}`);			
+		  			let setMsg = realm.objects('setMsg').filtered('devNo == $0', devNo)[0];
+		  			// let setMsg = this.state.setMsg;	  			
+	  				const volt = this.state.deviceVolt;	      		
+	  				const gatherFunc = this.state.gatherFunc;
+	  				const DtuFunc = this.state.networkFunc;
+	  				const Csq = this.state.networkQuality;
+	  				const interval = parseInt(this.state.gatherFre);
+	  				const intervalType = this.state.timeType;
+	  				const time = this.state.systemTime;
+
+	  				if(setMsg === undefined || setMsg === null) {
+	  					setMsg = realm.create('setMsg', {devType, devNo, volt, gatherFunc, DtuFunc, Csq, interval, intervalType, time});
+	  					console.log('创建setMsg！');
+	  					this.setState({ setMsg });
+	  				}else {
+	  					setMsg.devType = devType;
+	  					// setMsg.devNo = devNo;
+	  					setMsg.volt = volt;
+	  					setMsg.gatherFunc = gatherFunc;
+	  					setMsg.DtuFunc = DtuFunc;
+	  					setMsg.Csq = Csq;
+	  					setMsg.interval = interval;
+	  					setMsg.intervalType = intervalType;
+	  					setMsg.time = time;
+	  					console.log('更新setMsg！');
+	  				}	      				
+	  			});
+	  			this.showToast('设置设备信息到数据库成功');
+	  		}else {
+	  			// this.showToast(`设置设备信息到数据库失败`);
+	  			console.log('获取数据不全');
+	  		}
+		}catch(err){
+			Toast.show({ text: `设置设备信息到数据库失败 ${err}`, type: 'danger' });
+			console.log(`设置信息失败： ${err}`);
+		}
 	}
 
 	matchWhichStat(modelState) {
@@ -314,7 +424,7 @@ class DeviceMsg extends React.Component {
 			       const ymd = parseBuffer.dateStrToHex(this.state.systemTime);		       
 		        	HSBleManager.write(parseBuffer.setSysTime(ymd), 2);	        	
 			    }, 1000);
-			});	        	       
+			});
 
 	        this.setState({isSetBtnClick: true});
 	      });
@@ -357,6 +467,28 @@ class DeviceMsg extends React.Component {
   _onPickerValueChange = (value, index) => {
   	console.log(`Picker值：${value}, index=${index}`);
   	this.setState({timeType: value});
+  }
+
+  formatDateTime() {
+	let date = new Date();
+	let y = date.getFullYear();
+	let m = date.getMonth() + 1;
+	m = m < 10 ? ('0' + m) : m;
+	let d = date.getDate();
+	d = d < 10 ? ('0' + d) : d;
+	var h = date.getHours();
+	h = h < 10 ? ('0' + h) : h;
+	let minute = date.getMinutes();
+	let second = date.getSeconds();
+	minute = minute < 10 ? ('0' + minute) : minute;
+	second = second < 10 ? ('0' + second) : second;
+	const DateTimeStr = y + '-' + m + '-' + d + ' ' + h + ':' + minute + ':' + second;
+	return DateTimeStr;
+  };
+
+  _getCurrentDateTime() {
+  	const timeStr = this.formatDateTime();
+  	this.setState({systemTime: timeStr});
   }
 
 	render(){
@@ -422,7 +554,7 @@ class DeviceMsg extends React.Component {
 						</ListItem>
 
 						<ListItem>
-							<Text>监测间隔：</Text>					
+							<Text style={{flex: 1}}>监测间隔：</Text>					
 							<TextInput
 								keyboardType='numeric'
 								onChangeText = {(text) => {
@@ -433,12 +565,12 @@ class DeviceMsg extends React.Component {
 								}}
 								value={this.state.gatherFre}
 								placeholder="请输入数字"
-								style={{textAlign: 'center', flex: 2}}
+								style={{textAlign: 'center', flex: 3}}
 							/>
 							<Picker
 								selectedValue={this.state.timeType}
 								onValueChange={this._onPickerValueChange}
-								style={{flex: 0.8}}
+								style={{flex: 1}}
 							>
 								<Picker.Item label='分钟' value='minute'></Picker.Item>
 								<Picker.Item label='小时' value='hour'></Picker.Item>
@@ -470,7 +602,12 @@ class DeviceMsg extends React.Component {
 					              }              
 					            }}
 					            onDateChange={(date) => {this.changeSysTime(date)}}
-				        	/>								
+				        	/>
+				        	<Button success
+				        			onPress={() => this._getCurrentDateTime()}
+				        			style={{marginLeft: 5}}>
+				        		<Text>当前时间</Text>
+				        	</Button>							
 						</ListItem>											
 					</List>	
 					<ListItem>
@@ -510,243 +647,3 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(DeviceMsg);
-=======
-import React from 'react';
-import {
-  View, 
-  Text,
-  Alert,
-} from 'react-native';
-
-import {
-  Container,
-  Header,
-  Title,
-  Content,
-  Button,
-  Icon,
-  Left,
-  Right,
-  Body,
-  ListItem,
-  Toast,
-  Input,  
-  
-} from 'native-base';
-
-import parseBuffer from '../../lib/parseBuffer';
-import { connect } from 'react-redux';
-import { NavigationEvents } from 'react-navigation';
-<<<<<<< HEAD
-import {
-  disconnectDevice,
-} from '../../actions/bleAction';
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-
-let HSBleManager;
-
-class DeviceMsg extends React.Component {
-
-	constructor(props){
-		super(props);
-		this.state = {
-			deviceType: '',
-			deviceNo: '',
-			deviceVolt: '',
-			gatherFunc: '',
-			networkFunc: '',
-			networkQuality: '',
-			gatherFre: '',
-			systemTime: '',
-		};
-		HSBleManager = global.HSBleManager;
-<<<<<<< HEAD
-	}	
-
-	componentWillMount() {
-		if (!this.props.connectedDevice) {
-	     	Alert.alert(
-		        '提示',
-		        '蓝牙未连接测斜仪，请先设置',
-		        [
-		          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
-		        ],
-		        {
-		        	cancelable: false
-		        }
-	     	);
-	    }
-	}
-
-	componentDidMount() {
-   		this.onDisconnect(); // 监听断开连接 
- 	}
-
- 	componentWillUnmount() {
- 		this.disconnectListener && this.disconnectListener.remove();
- 		this.setState = (state, callback) => {
-      		return;
-   		};
- 	}
-
-	setSysInfo() {
-		if(!this.props.connectedDevice){
-			this.showToast('蓝牙未连接设备');
-			console.log('设备未连接');			
-		}else{
-			HSBleManager.negotiateMtu().then(() => {
-	        HSBleManager.write(parseBuffer.awakeDevice(), 2);
-	        HSBleManager.read();
-	        HSBleManager.write(parseBuffer.updateData(), 2);
-	        HSBleManager.read();
-	      });
-		}	    
-	}
-
-	showAlert() {
-		Alert.alert(
-=======
-	}
-
-	componentDidMount() {
-	    if (!this.props.connectedDevice) {
-	      Alert.alert(
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-	        '提示',
-	        '蓝牙未连接测斜仪，请先设置',
-	        [
-	          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
-	        ],
-<<<<<<< HEAD
-	     );
-	}
-
-	showToast(text, position = 'bottom', duration = 2000) {
-      Toast.show({ text, position, duration });
-  	}
-
-	// 监听蓝牙断开
-  	onDisconnect() {
-      this.disconnectListener = HSBleManager.manager.onDeviceDisconnected(HSBleManager.peripheralId, (err, device) => {
-      if (err) {             
-        this.props.disconnectDevice();                
-        console.log('设备断开蓝牙-设备页面', err);		
-      }else{
-        this.props.disconnectDevice();                     
-        console.log('设备断开蓝牙-设备页面', device.id, device.name);
-      }      
-    });
-  }
-
-=======
-	      );
-	    } else {
-	      HSBleManager.negotiateMtu().then(() => {
-	        HSBleManager.write(parseBuffer.awake(), 2);
-	        HSBleManager.read();
-	        HSBleManager.write(parseBuffer.updateData(), 2);
-	        HSBleManager.read();
-	      });
-	    }
-	}
-
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-	render(){
-		return(
-			<Container>
-				<Header>
-					<Left style={{flex: 1}}>
-						<Button transparent onPress={() => this.props.navigation.goBack()}>	
-							<Icon name='arrow-back'/>
-						</Button>
-					</Left>
-					<Body style={{flex:2, alignItems: 'center'}}>
-						<Title>设备-系统 信息</Title>
-					</Body>
-					<Right style={{flex:1}}/>									
-				</Header>			
-
-				<Content>					
-					<View>					
-						<ListItem>							
-							<Text>设备型号：</Text>																					
-							<Input placeholder='Device Type'/>							
-						</ListItem>
-
-						<ListItem>							
-							<Text>设备编号：</Text>																					
-							<Input placeholder='Device No'/>							
-						</ListItem>
-
-						<ListItem>
-							<Text>设备电压：</Text>
-							<Input placeholder='Device Volt'/>
-						</ListItem>
-
-						<ListItem>							
-							<Text>采集功能：</Text>
-							<Input placeholder='Gather func'/>							
-						</ListItem>
-
-						<ListItem>
-							<Text>网络通信功能：</Text>
-							<Input placeholder='Internet Connect func'/>							
-						</ListItem>
-
-						<ListItem>
-							<Text>网络通信质量：</Text>
-							<Input placeholder='Internet Connect Quality'/>
-						</ListItem>
-
-						<ListItem>
-							<Text>采集频率：</Text>
-							<Input placeholder='Gather Frequency'/>							
-						</ListItem>
-
-						<ListItem>							
-							<Text>系统时间：</Text>
-							<Input placeholder='System Time'/>							
-						</ListItem>											
-					</View>
-					<View style={{marginTop: 50}}>
-						<Button block rounded info 
-<<<<<<< HEAD
-							style={{height: 80, marginLeft: 5, marginRight: 5}}
-							onPress={() => this.setSysInfo()}
-						>							
-=======
-							style={{height: 80, marginLeft: 5, marginRight: 5}}>							
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-							<Text style={{fontSize: 40, color: 'white'}}>设置</Text>
-						</Button>
-					</View>
-				</Content>				
-			</Container>
-		);	
-	}		
-}
-
-const mapStateToProps = (state) => {
-  return {
-<<<<<<< HEAD
-    connectedDevice: state.bles.connectedDevice,    
-  };
-};
-
-const mapDispatchToProps = (dispatch) => {
-  return {       
-    disconnectDevice: () => dispatch(disconnectDevice()),
-  };
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(DeviceMsg);
-=======
-    connectedDevice: state.bles.connectedDevice,
-  };
-};
-
-
-export default connect(mapStateToProps, null)(DeviceMsg);
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
