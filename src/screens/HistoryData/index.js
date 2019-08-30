@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React from 'react';
 import {
   View, 
@@ -38,8 +37,9 @@ import {
 } from '../../actions/bleAction';
 
 import DateTimePicker from 'react-native-datepicker';
-
 import { Table, Row, Rows } from 'react-native-table-component';
+import moment from 'moment';
+import openRealm from '../../lib/realmStorage';
 
 let HSBleManager;
 
@@ -61,10 +61,12 @@ class HistoryData extends React.Component {
 			isTapGather: false,	
 			isCurrentVersion: false,//是否为电流版			
 
-			channData2table:[],//表格行数据      					
-      		// tableHead: ['通道号', '时间', '频率', '频模', '温度'],
+			channData2table:[],//表格行数据      		
       		dataText: '',
       		version: 'other',
+      		realm: null,
+      		vibrate: null,
+      		current: null,
 		};
 		
 		HSBleManager = global.HSBleManager;				
@@ -111,39 +113,107 @@ class HistoryData extends React.Component {
 		this.setState({ channData2table: this.state.channData2table });		
 	}
 
-	getHisData(date) {		
-		try {
-			if(this.state.beginDatetime === '' || this.state.endDatetime === '') {
-				this.showToast('请选择开始和结束日期');
-				return;
-			}
-			if(this.isAnyDeviceConn()){
-				//清除数据				
-				this.setState({ channData2table: [] });	
+	getHisData(date) {	
+		if(this.state.beginDatetime === '' || this.state.endDatetime === '') {
+			this.showToast('请选择开始和结束日期');
+			return;
+		}else if(!this.isAnyDeviceConn()){
+			this.props.disconnectDevice();
+			this.showToast('设备断开，请重新连接');
+			return;
+		}
+		
+		const realm = this.state.realm;
+		const beginDatetime = moment( this.state.beginDatetime).toDate();
+		const endDatetime = moment( this.state.endDatetime).toDate();
+		
+		// const deviceSN = this.props.connectedDevice.name.toString();
+		const deviceSN = 'HS32204J70002';
 
-				this.setState({
-					isTapGather: true,
-					isSelectDate: true,
-				});
-				const beginDatetime = this.state.beginDatetime;
-				const endDatetime = this.state.endDatetime;
-				const beginYMD = parseBuffer.dateStrToHex(beginDatetime);
-				const endYMD = parseBuffer.dateStrToHex(endDatetime);			
-				
-				HSBleManager.negotiateMtu().then(() => {
-					HSBleManager.write(parseBuffer.awakeDevice(), 2);   				   
-			
-					setTimeout( () => {
-					      HSBleManager.write(parseBuffer.getHistoryData(beginYMD, endYMD), 2);
-					}, 1000 );
-				});				
-			}	
-		}catch(err) {
-			if(err.errorCode === 201 || err.errorCode === 205){
-				this.props.disconnectDevice();
-				this.showToast('设备断开，请重新连接');
+		console.log(`开始时间：${beginDatetime}, 结束时间：${endDatetime}`);
+
+		let hasRealmData = false;
+		if(this.state.version == 'current') {			
+			let current = realm.objects('OsmometerCurrent').filtered('sn == $0 && sysTime >= $0 && sysTime <= $1', deviceSN, beginDatetime, endDatetime);			
+			if(current.length > 0) {
+				hasRealmData = true;
 			}
-		}		
+
+			let allData = [];
+			for (let j = 0; j < current.length; j++) {   	
+				const sysTime = moment(vibrate[j].sysTime).format('YYYY-MM-DD hh:mm:ss');			
+   				for( let i = 0; i < current[j].currentArr.length; i++) {
+	        		const channelNo = current[j].currentArr[i].channelNo;
+	        		const current = current[j].currentArr[i].current;//电流
+	        		const waterLevel = current[j].currentArr[i].waterLevel;	        		
+	        		console.log(`${i}-通道号：${channelNo}, 电流:${current}, 水位：${waterLevel}`);	
+
+	        		const singleData = [channelNo, sysTime, current, waterLevel];
+		        	allData.push(singleData);		        		
+	        	}
+	        	this.setState({ channData2table: allData, isTapGather: false, isSelectDate: true });  
+   			}
+		}else if(this.state.version === 'other') {
+			this.setState({ channData2table: [] });
+			let vibrate = realm.objects('OsmometerVibrate').filtered('sn == $0 && sysTime >= $1 && sysTime <= $2', deviceSN, beginDatetime, endDatetime);			
+			// let vibrate = realm.objects('OsmometerVibrate').filtered('sn == $0', deviceSN);			
+			
+			if(vibrate.length > 0) {
+				hasRealmData = true;
+				console.log(`系统时间：${vibrate[0].sysTime}`);
+
+				let allData = [];
+				for (let j = 0; j < vibrate.length; j++) {   				
+					const sysTime = moment(vibrate[j].sysTime).format('YYYY-MM-DD hh:mm:ss');
+	   				for( let i = 0; i < vibrate[j].vibrateArr.length; i++) {
+		        		const channelNo = vibrate[j].vibrateArr[i].channelNo;
+		        		const frequency = vibrate[j].vibrateArr[i].frequency;
+		        		const mode = vibrate[j].vibrateArr[i].mode;
+		        		const temperature = vibrate[j].vibrateArr[i].temperature;
+		        		console.log(`${i}-通道号：${channelNo}, 频模：${mode}, 频率：${frequency}, 温度：${temperature}`);	
+		        		const singleData = [channelNo, sysTime, frequency, mode, temperature];
+		        		allData.push(singleData);		        		
+		        	}
+	   			}
+	   				   					      						
+				this.setState({ channData2table: allData, isTapGather: false, isSelectDate: true });  
+			}else {
+				const time = new Date();
+				console.log('没有找到数据！时间：${time.toString()}');
+			}		   			   		      	
+		}
+
+		//如果数据库没有数据，再发送指令获取
+		if(!hasRealmData) {
+			try {			
+				if(this.isAnyDeviceConn()){
+					//清除数据				
+					this.setState({ channData2table: [] });	
+
+					this.setState({
+						isTapGather: true,
+						isSelectDate: true,
+					});
+					const beginDatetime = this.state.beginDatetime;
+					const endDatetime = this.state.endDatetime;
+					const beginYMD = parseBuffer.dateStrToHex(beginDatetime);
+					const endYMD = parseBuffer.dateStrToHex(endDatetime);			
+					
+					HSBleManager.negotiateMtu().then(() => {
+						HSBleManager.write(parseBuffer.awakeDevice(), 2);   				   
+				
+						setTimeout( () => {
+						      HSBleManager.write(parseBuffer.getHistoryData(beginYMD, endYMD), 2);
+						}, 1000 );
+					});				
+				}	
+			}catch(err) {
+				if(err.errorCode === 201 || err.errorCode === 205){
+					this.props.disconnectDevice();
+					this.showToast('设备断开，请重新连接');
+				}
+			}
+		}				
 	}
 
  	calFreMode(valueArray) {
@@ -183,17 +253,21 @@ class HistoryData extends React.Component {
 	      );
 	    }
 	    if(this.props.connectedDevice) {
-	      		const deviceType = this.props.connectedDevice.name.toString().substring(2, 4);
-	      		if(deviceType == '33') {
-	      			this.setState({ version: 'current' });
-	      		}else{
-	      			this.setState({ version: 'other' });
-	      		}
+      		const deviceType = this.props.connectedDevice.name.toString().substring(2, 4);
+      		if(deviceType == '33') {
+      			this.setState({ version: 'current' });
+      		}else{
+      			this.setState({ version: 'other' });
+      		}
 	    }
+	    openRealm().then((realm) => {
+	    	this.setState({ realm });
+	    });
 	}
 
 	componentWillUnmount() {
 		this.disconnectListener && this.disconnectListener.remove();
+		this.tableRender && clearTimeout(this.tableRender);
 		HSBleManager.unmonitor();
 		this.setState = (state, callback) => {
       		return;
@@ -252,20 +326,20 @@ class HistoryData extends React.Component {
 	      }
 	    } else {
 	    	const buffer = Buffer.from(characteristic.value, 'base64');
-      		const result = parseBuffer.push(buffer, false);   
+      		const result = parseBuffer.push2parse(buffer);   
+      		// const result = parseBuffer.push(buffer);
 
       		let cacheBuffer = Buffer.alloc(0); // 暂存数据
       		cacheBuffer = Buffer.concat([cacheBuffer, buffer]);
       		this.consoleBuffer(cacheBuffer, '接收');	 
 
       		if(result){   
-      			if(result.sn){
-	      			
+      			if(result.sn){	      			
 	      			const snNo = result.sn;	      			      		
 	      			if(snNo[2] === '3' && snNo[3] === '3'){
 	      				this.setState({ isCurrentVersion: true });
 	      			}
-	      		}				
+	      		}	
 
 	      		if((result.channelsFre && result.channelsTemperature) || result.current  && result.SysTime) {
 
@@ -289,17 +363,19 @@ class HistoryData extends React.Component {
 	      				isTapGather: false,	
 	      			});
 
+	      			let allData = [];
 	      			for(let index = 0; index < 4; index++) {	
 	      				if(this.state.isCurrentVersion){
 	      					const singleData = [index+1, systemTime, currValue[index], waterLevel[index]];		      				
-		      				this.state.channData2table.push(singleData);
-		      				this.setState({ channData2table: this.state.channData2table });
+		      				allData.push(singleData);
+		      				
 	      				}else {
 	      					const singleData = [index+1, systemTime, fre[index], mode[index], celsius[index]];		      				
-		      				this.state.channData2table.push(singleData);
-		      				this.setState({ channData2table: this.state.channData2table });
-	      				}  					      					
-	      			}	      			
+		      				allData.push(singleData);		      				
+	      				} 	      								      				
+	      			}
+	      			this.state.channData2table = this.state.channData2table.concat(allData);
+	      			this.setState({ channData2table: this.state.channData2table });  				      		
 	      		}
 	      	
 	      		if(result.state && this.state.isSelectDate){
@@ -356,59 +432,63 @@ class HistoryData extends React.Component {
 						</Button>
 					</Right>
 				</Header>			
-				<Content>						
+				<Content>	
+					<ListItem>
+						<Text style={{flex: 0.5, alignItems: 'center'}}> 从 </Text>
+							<DateTimePicker
+					            style={{height: 40, flex: 2.5}}
+					            date={this.state.beginDatetime}
+					            mode="datetime"
+					            placeholder="选择开始日期"
+					            format="YYYY-MM-DD HH:mm:ss"
+					            minDate="2000-01-01 00:00:01"
+					            maxDate="2099-12-31 23:59:59"
+					            confirmBtnText="Confirm"
+					            cancelBtnText="Cancel"
+					            customStyles={{
+					              dateIcon: {
+					                position: 'absolute',
+					                left: 0,
+					                top: 4,
+					                marginLeft: 0
+					              },
+					              dateInput: {
+					                marginLeft: 36,
+					                borderWidth: 1,
+					              }
+					            }}				            
+					            onDateChange={(date) => {this.chooseBeginData(date)}}
+					        />
+					        <Text style={{flex: 0.5, alignItems: 'center'}}> 到 </Text>
+					        <DateTimePicker
+					            style={{height: 40, flex: 2.5}}
+					            date={this.state.endDatetime}
+					            mode="datetime"
+					            placeholder="选择结束日期"
+					            format="YYYY-MM-DD HH:mm:ss"
+					            minDate="2000-01-01 00:00:01"
+					            maxDate="2099-12-31 23:59:59"
+					            confirmBtnText="Confirm"
+					            cancelBtnText="Cancel"
+					            customStyles={{
+					              dateIcon: {
+					                position: 'absolute',
+					                left: 0,
+					                top: 4,
+					                marginLeft: 0
+					              },
+					              dateInput: {
+					                marginLeft: 36,
+					                borderWidth: 1,
+					              }
+					            }}				            
+					            onDateChange={(date) => {this.chooseEndData(date)}}
+					        />
+					</ListItem>					
 					<View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
-						<Text>  选择日期:  从</Text>
-						<DateTimePicker
-				            style={{height: 40}}
-				            date={this.state.beginDatetime}
-				            mode="datetime"
-				            placeholder="选择开始日期"
-				            format="YYYY-MM-DD HH:mm:ss"
-				            minDate="2000-01-01 00:00:01"
-				            maxDate="2099-12-31 23:59:59"
-				            confirmBtnText="Confirm"
-				            cancelBtnText="Cancel"
-				            customStyles={{
-				              dateIcon: {
-				                position: 'absolute',
-				                left: 0,
-				                top: 4,
-				                marginLeft: 0
-				              },
-				              dateInput: {
-				                marginLeft: 36,
-				                borderWidth: 1,
-				              }
-				            }}				            
-				            onDateChange={(date) => {this.chooseBeginData(date)}}
-				        />
-				        <Text> 到 </Text>
-				        <DateTimePicker
-				            style={{height: 40}}
-				            date={this.state.endDatetime}
-				            mode="datetime"
-				            placeholder="选择结束日期"
-				            format="YYYY-MM-DD HH:mm:ss"
-				            minDate="2000-01-01 00:00:01"
-				            maxDate="2099-12-31 23:59:59"
-				            confirmBtnText="Confirm"
-				            cancelBtnText="Cancel"
-				            customStyles={{
-				              dateIcon: {
-				                position: 'absolute',
-				                left: 0,
-				                top: 4,
-				                marginLeft: 0
-				              },
-				              dateInput: {
-				                marginLeft: 36,
-				                borderWidth: 1,
-				              }
-				            }}				            
-				            onDateChange={(date) => {this.chooseEndData(date)}}
-				        />
-					</View>												
+						
+					</View>		
+
 					<View style={{alignItems: 'center'}}>
 						<Text style={{alignItems: 'center', fontSize: 20}}>历史数据列表</Text>
 					</View>
@@ -440,197 +520,3 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(HistoryData);
-=======
-import React from 'react';
-import {
-  View, 
-  Text,
-  Alert,
-  TextInput,
-} from 'react-native';
-
-import {
-  Container,
-  Header,
-  Title,
-  Content,
-  Button,
-  Icon,
-  Left,
-  Right,
-  Body,
-  ListItem,
-  Toast,
-  Input,  
-  Separator,
-  DatePicker,
-} from 'native-base';
-
-import { NavigationEvents } from 'react-navigation';
-import styles from "./styles";
-import { Buffer } from 'buffer';
-
-class HistoryData extends React.Component {
-
-	constructor(props){
-		super(props);
-		this.state = {
-			chosenDate: new Date(),
-			frequency: null,
-			frequencyMode:null,
-			celsius:null,
-			channel: [],			
-		};
-		this.setDate = this.setDate.bind(this);
-		HSBleManager = global.HSBleManager;
-	}
-
-	setDate(newDate){
-		this.setState({ chosenDate: newDate });
-		//根据时间从数据库中提取数据，并显示在相应的通道上
-		//this.showData();
-	}
-
-	showData(){
-
-	}
-
-	componentWillUnmount() {
-		HSBleManager.unmonitor();
-		this.setState = (state, callback) => {
-      		return;
-   		 };	
-	}
-	
-	render(){
-		return(
-			<Container>
-				<Header>
-					<Left style={{flex: 1}}>
-						<Button transparent onPress={() => this.props.navigation.goBack()}>	
-							<Icon name='arrow-back'/>
-						</Button>
-					</Left>
-					<Body style={{flex:2, alignItems: 'center'}}>
-						<Title>手动获取信息</Title>
-					</Body>
-					<Right style={{flex:1}}/>									
-				</Header>			
-
-				<Content>
-					<View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
-						<Text>  选择日期:  </Text>
-						<DatePicker
-							defaultDate={new Date(Date.now())}
-							locale={"zh"}
-							timeZoneOffsetInMinutes={undefined}
-							modalTransparent={false}
-							animationType={'fade'}
-							androidMode={'default'}
-							placeholder='选择日期'
-							textStyle={{color: 'blue'}}
-							placeHolderTextStyle={{color: '#d3d3d3'}}
-							onDateChange={this.setDate}
-							disabled={false}
-						/>
-					</View>					
-
-					<Separator bordered>
-						<Text>通道1</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>	
-
-					<Separator bordered>
-						<Text>通道2</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<Separator bordered>
-						<Text>通道3</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<Separator bordered>
-						<Text>通道4</Text>
-					</Separator>					
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>										
-				</Content>				
-			</Container>
-		);		
-	}
-}
-
-export default HistoryData;
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
