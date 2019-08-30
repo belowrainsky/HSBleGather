@@ -1,11 +1,8 @@
 import { Buffer } from 'buffer';
 import aesjs from 'aes-js';
-<<<<<<< HEAD
 import {  
   Toast,
 } from 'native-base';
-=======
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 
 let cacheBuffer = Buffer.alloc(0); // 暂存数据
 
@@ -37,7 +34,6 @@ function consoleBuffer(b, title = '') {
   console.log(`${title}Buffer ${string}`);
 }
 
-<<<<<<< HEAD
 function showToast(text, position = 'bottom', duration = 5000) {
     Toast.show({ text, position, duration });
 }
@@ -53,9 +49,13 @@ function push2parse(b) {
   
   console.log(`开始index=${startIndex}, 结束index+2=${endIndex+2}`);  
 
-  const productType = cacheBuffer.slice(3, 5);
-  console.log(`产品类型值 = ${productType.toString()}`);
-  const isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+  let productType, isOsometer;
+  if(startIndex !== -1 && endIndex !== -1){    
+    productType = cacheBuffer.slice(3, 5);
+    isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+    productType = productType.readUInt8(0);
+    console.log(`产品类型值 = ${productType}, 是否是渗压计: ${isOsometer}`);
+  } 
 
   while (endIndex !== -1 && startIndex !== -1 && cacheBuffer.length >= 11)
   {
@@ -66,34 +66,31 @@ function push2parse(b) {
 
     let check = xor(data);
     let checkByte = entry.slice(-3, -2);
-    console.log(`check: ${check.toString()}, checkByte: ${checkByte.toString()}`);
+    let string;
+    
     if (checkByte.equals(check)) {      
       // result = parseData(data);     
       Object.assign(result, parseData(data));
     } else {
       consoleBuffer(check, '校验异常');
-      const string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');      
-      showToast(`数据校验异常，请重新获取，数据=${string}`);        
+      string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');                  
     }
 
     let count = 0;
-    while(!checkByte.equals(check)) {      
-      console.log(`---01---`);
-      const nextIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), endIndex);
+    while(!checkByte.equals(check)) {            
 
+      const nextIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), endIndex);
       console.log(`nextIndex=${nextIndex}, endIndex=${endIndex}`);
 
       if(nextIndex !== -1) {
         entry = cacheBuffer.slice(startIndex, nextIndex + 2);
         data = entry.slice(1, -3);
         check = xor(data);
-        checkByte = entry.slice(-3, -2);
-        console.log(`---1---`);
-        consoleBuffer(check, '校验');
-        consoleBuffer(checkByte, '字段校验值');        
+        checkByte = entry.slice(-3, -2);        
+        consoleBuffer(check, '校验值应该是：');
+        consoleBuffer(checkByte, '而字段校验值');        
         if(checkByte.equals(check))
-        {
-          console.log(`---2---`);
+        {          
           endIndex += nextIndex;
           break;
         } else {
@@ -102,6 +99,7 @@ function push2parse(b) {
       }
       if(count >= 10){
         console.log(`count >= 10`);
+        showToast(`数据校验异常，请重新获取，数据=${string}`);
         break;
       }
       count += 1;
@@ -120,60 +118,40 @@ function push2parse(b) {
   return result;
 }
 
-function push(b, isGetDevMSg) {
-  let result = {};
-=======
 function push(b) {
-  let result = null;
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
+  let result = {};
   consoleBuffer(b, '接收');
   cacheBuffer = Buffer.concat([cacheBuffer, b]);
   consoleBuffer(cacheBuffer, '暂存');
 
   let startIndex = cacheBuffer.indexOf(Buffer.from([0xfe]));
   let endIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), startIndex);
-<<<<<<< HEAD
 
   let nextIndex = cacheBuffer.indexOf(Buffer.from([0xfe]), endIndex);
   let lastIndex = cacheBuffer.lastIndexOf(Buffer.from([0x0d, 0x0a], endIndex));
   
-  console.log(`开始index=${startIndex}, 结束index+2=${endIndex+2}`);  
+  console.log(`开始index=${startIndex}, 结束index+2=${endIndex+2}`);    
 
-  if(isGetDevMSg) {
-    console.log('isGetDevMSg == true');
-    // if((endIndex+2) !== nextIndex || nextIndex === -1) {
-    //   console.log('isGetDevMSg == true, 或者nextindex=-1');
-    //   return;
-    // }    
-  }else {
-    console.log('isGetDevMSg == false');
-    if(lastIndex === -1){
-      console.log('isGetDevMSg == false, 或者lastIndex=-1');
-      return;
-    }
-  }  
-
-  // const len = parseInt(cacheBuffer.slice(-3, -2));
   let len;
   if(startIndex !== -1 && cacheBuffer.length >= 11 ) {
     len = cacheBuffer.slice(startIndex+6, startIndex+7).readUInt8(0) + 10;
     console.log(`数据长度： ${len}`);
   }  
-
-  const productType = cacheBuffer.slice(3, 5);
-  console.log(`产品类型值 = ${productType}`);
-  const isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+    
+  let productType, isOsometer;
+  if(startIndex !== -1 && endIndex !== -1){    
+    productType = cacheBuffer.slice(3, 5);
+    isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+    productType = productType.readUInt8(0);
+    console.log(`产品类型值 = ${productType}, 是否是渗压计: ${isOsometer}`);
+  }
 
   while (endIndex !== -1 && startIndex !== -1 && cacheBuffer.length >= 11)
   {
-=======
-  while (endIndex !== -1 && startIndex !== -1) {
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
     const entry = cacheBuffer.slice(startIndex, endIndex + 2);
     consoleBuffer(entry, '单元');
     const data = entry.slice(1, -3);
     consoleBuffer(data, '数据');
-<<<<<<< HEAD
 
     const check = xor(data);
     const checkByte = entry.slice(-3, -2);
@@ -185,34 +163,12 @@ function push(b) {
       consoleBuffer(check, '校验异常');
       const string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');      
       showToast(`数据校验异常，请重新获取，数据=${string}`);      
-=======
-    const check = xor(data);
-    const checkByte = entry.slice(-3, -2);
-
-    if (checkByte.equals(check)) {
-      // consoleBuffer(data, '解密前')
-      // const decrypted = decryptData(data.slice(0, 16));
-      // const other = data.slice(16);
-      // const concat = Buffer.concat([decrypted, other]);
-      // consoleBuffer(concat, '解密后')
-      // result = parseData(concat);
-      result = parseData(data);
-    } else {
-      consoleBuffer(check, '校验异常');
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
     }
 
     cacheBuffer = cacheBuffer.slice(endIndex + 2);
     startIndex = cacheBuffer.indexOf(Buffer.from([0xfe]));
-    endIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), startIndex);
-<<<<<<< HEAD
-
-    console.log(`开始index1=${startIndex}, 结束index1=${endIndex}`);    
+    endIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), startIndex);     
   }    
-=======
-  }
-
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
   return result;
 }
 
@@ -223,17 +179,18 @@ function parseData(data) {
 
   let i = 4;
   const dataLength = data.length;
-  while (i < dataLength) {
-    const field = data.slice(i, i + 1); // 字段
-    const fieldLength = data.slice(i + 1, i + 2).readUInt8(0); // 字段长度
-    const value = data.slice(i + 2, i + 2 + fieldLength);
-<<<<<<< HEAD
-    Object.assign(result, fieldValueMap(field, fieldLength, value));    
-=======
-    Object.assign(result, fieldValueMap(field, fieldLength, value));
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
-    i = i + 2 + fieldLength;
-  }
+  try{
+    while (i < dataLength) {
+      const field = data.slice(i, i + 1); // 字段
+      const fieldLength = data.slice(i + 1, i + 2).readUInt8(0); // 字段长度
+      const value = data.slice(i + 2, i + 2 + fieldLength);
+      Object.assign(result, fieldValueMap(field, fieldLength, value));    
+      i = i + 2 + fieldLength;
+    }
+  }catch(err){
+    console.log(`错误：${err}`);
+    return {};
+  }  
 
   return result;
 };
@@ -244,14 +201,10 @@ function productTypeMap(b) {
   if (b.equals(Buffer.from([0x02, 0x01]))) return 'RDM355';
   if (b.equals(Buffer.from([0x02, 0x02]))) return 'RDM16475';
   if (b.equals(Buffer.from([0x03, 0x00]))) return 'SDM';
-<<<<<<< HEAD
   if (b.equals(Buffer.from([0x04, 0x00]))) return 'Osmometer';
   // throw new Error('无效产品类型');
   showToast('无效产品类型');
   console.log('无效产品类型');
-=======
-  throw new Error('无效产品类型');
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 }
 
 function fieldValueMap(field, fieldLength, value) {
@@ -260,21 +213,10 @@ function fieldValueMap(field, fieldLength, value) {
       t: value.readIntBE(0, fieldLength) / 100, // 温度
     };
   }
-<<<<<<< HEAD
   
   if (field.equals(Buffer.from([0x03]))) {
     return {
       state: value.readUIntBE(0, fieldLength), // 状态
-=======
-  if (field.equals(Buffer.from([0x02]))) {
-    return {
-      v: value.readIntBE(0, fieldLength) / 100, // 电压
-    };
-  }
-  if (field.equals(Buffer.from([0x03]))) {
-    return {
-      state: value, // 状态
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
     };
   }
   if (field.equals(Buffer.from([0x04]))) {
@@ -306,10 +248,7 @@ function fieldValueMap(field, fieldLength, value) {
   if (field.equals(Buffer.from([0x11]))) {
     return {
       meshId: value, // Mesh id
-<<<<<<< HEAD
 
-=======
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
     };
   }
   if (field.equals(Buffer.from([0x12]))) {
@@ -317,7 +256,6 @@ function fieldValueMap(field, fieldLength, value) {
       meshAp: value, // Mesh Ap 判断位
     };
   }
-<<<<<<< HEAD
   
   if (field.equals(Buffer.from([0xe1]))) {
     return {
@@ -325,18 +263,15 @@ function fieldValueMap(field, fieldLength, value) {
     };
   }
 
-=======
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
   if (field.equals(Buffer.from([0xe0]))) {
     return {
       sn: value.toString(), // SN码
     };
   }
-<<<<<<< HEAD
 
   if (field.equals(Buffer.from([0x02]))) {
     return {
-      volt: value.readIntBE(0, fieldLength) / 100, // 电压
+      volt: value.readIntBE(0, fieldLength) / 100, // 电压      
     };
   }
 
@@ -447,15 +382,6 @@ function fieldValueMap(field, fieldLength, value) {
 
   console.log('错误的字段或未设置的字段');
   return {};  
-=======
-  if (field.equals(Buffer.from([0xe1]))) {
-    return {
-      version: value.toString(), // 固件版本
-    };
-  }
-  console.log('错误的字段');
-  return {};
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 }
 
 function wrapPayload(payload) {
@@ -467,7 +393,6 @@ function wrapPayload(payload) {
   ]);
 };
 
-<<<<<<< HEAD
 //设备-系统 信息 页面的获取
 function getOsmometerMsg()
 {  
@@ -626,98 +551,5 @@ export default {
   getOsmometerMsg,
 
   getCurSaveData,
-=======
-<<<<<<< HEAD
-//获取SN码
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-function SNPacket() {
-  const cmd = Buffer.from([0x00, 0x00, 0x00, 0x00, 0xe0]);
-  return wrapPayload(cmd);
-}
-
-<<<<<<< HEAD
-//获取版本信息
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-function versionPacket() {
-  const cmd = Buffer.from([0x00, 0x01, 0x00, 0x00, 0xe1]);
-  return wrapPayload(cmd);
-}
-
-<<<<<<< HEAD
-//唤醒设备
-function awakeDevice() {
-  const cmd = Buffer.from([0x00, 0x02, 0x00, 0x00, 0x11, 0x00]);
-  return wrapPayload(cmd);
-}
-
-//获取更新时间
-function updateData() {
-  const cmd = Buffer.from([0x00, 0x03, 0x00, 0x00, 0xe2, 0x00]);
-=======
-function awake() {
-  const cmd = Buffer.from([0x00, 0x02, 0x04, 0x00, 0x11]);
-  return wrapPayload(cmd);
-}
-
-function updateData() {
-  const cmd = Buffer.from([0x00, 0x03, 0x04, 0x00, 0xe2]);
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-  return wrapPayload(cmd);
-}
-
-
-<<<<<<< HEAD
-//设置电压
-function setVolt() {
-  const cmd = Buffer.from([0x00, 0x04, 0x00, 0x01, 0x02, 0x00]);
-  return wrapPayload(cmd);
-}
-
-//设置时间
-function setCurrentTime() {
-  const cmd = Buffer.from([0x00, 0x05, 0x00, 0x01, 0xe3, 0x00]);
-  return wrapPayload(cmd);
-}
-
-//设置闹钟
-function setAlarmClock() {
-  const cmd = Buffer.from([0x00, 0x06, 0x00, 0x01, 0xe4, 0x00]);
-  return wrapPayload(cmd);
-}
-
-//设置状态
-function setDeviceState() {
-  const cmd = Buffer.from([0x00, 0x07, 0x00, 0x01, 0x03, 0x00]);
-  return wrapPayload(cmd);
-}
-
-//设置频率
-function setFrequency() {
-  const cmd = Buffer.from([0x00, 0x08, 0x00, 0x01, 0x0A, 0x00]);
-  return wrapPayload(cmd); 
-}
-
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-export default {
-  consoleBuffer,
-  push,
-  SNPacket,
-  versionPacket,
-<<<<<<< HEAD
-  awakeDevice,
-  updateData,
-  setVolt,
-  setCurrentTime,
-  setAlarmClock,
-  setDeviceState,
-  setFrequency,
-=======
-  awake,
-  updateData,
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
 };
 

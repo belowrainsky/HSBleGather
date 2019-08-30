@@ -1,78 +1,82 @@
 import Realm from 'realm';
-
-const OsmometerSchema = {
-  name: 'Osmometer',
-  primaryKey: 'Id',
-  properties: {
-<<<<<<< HEAD
-    collectAt: 'string',
-    voltage: 'double?',
-    temperature: 'double',
-    frequency: 'double',
-    mod: 'double',
-    waterLevel: 'double?',
-
-    pressure: 'double?',//'渗压'
-    current: 'double?',// '电流',
-    Id: 'int',
-    channelNo: 'int',
+import moment from 'moment';
+//设备-系统 信息 页面的table
+const setMsgSchema = {
+  name: 'setMsg',
+  primaryKey: 'devNo',
+  properties: {    
+    devType: 'string', //设备型号
+    devNo: 'string',   //设备SN码
+    volt: 'double?',    //电压
+    gatherFunc: 'string',//采集功能
+    DtuFunc: 'string',  //网络通信功能
+    Csq: 'int',      //网络通信质量
+    interval: 'int', //监测间隔
+    intervalType: 'string',//分钟或小时
+    time: 'string'      //系统时间    
   }
 };
 
-const devsVersionSchema = {
-  name: 'devsVersion',
-  primaryKey: 'id',
-  properties: {
-    id: 'int',
-    version: 'string?',
+//电流版本的table --人工采集
+const CurrentSchema = {
+  name: 'Current',  
+  properties: {  
+    channelNo: 'int',         
+    current: 'double', //电流
+    waterLevel: 'double',//水位
   },
 };
 
-=======
-    collectAt: 'date',
-    voltage: 'double',
-    temperature: 'double',
-    frequency: 'double',
-    mod: 'double',
-    waterLevel: 'double',
-
-    pressure: 'double',//'渗压'
-    current: 'double',// '电流',
-    Id: 'int',
+//振弦版本的table --人工采集
+const VibrateSchema = {
+  name: 'Vibrate',  
+  properties: {
+    channelNo: 'int',
+    frequency: 'double',//频率
+    mode: 'double',      //频模
+    temperature: 'double',//温度
   }
 };
 
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
+const OsmometerCurrentSchema = {
+  name: 'OsmometerCurrent',
+  primaryKey: 'id',
+  properties: {
+    id: 'int',    
+    sysTime: 'date',
+    sn: 'string',
+    currentArr: 'Current[]',
+  },
+};
+
+const OsmometerVibrateSchema = {
+  name: 'OsmometerVibrate',
+  primaryKey: 'id',
+  properties: {
+    id: 'int',    
+    sysTime: 'date',
+    sn: 'string',
+    vibrateArr: 'Vibrate[]',
+  },
+};
+
 const checkEmpty = (value) => {
   return value === null || value === undefined;
 };
 
 const openRealm = async () => {
   try {
-<<<<<<< HEAD
     let realm = new Realm({
       schema: [
-        OsmometerSchema,
-        devsVersionSchema,
+        CurrentSchema,
+        VibrateSchema,                  
+        setMsgSchema,   
+        OsmometerCurrentSchema,
+        OsmometerVibrateSchema,
       ]
-    });    
-    realm.write(() => {
-      const devs = realm.create('devsVersion', {
-        id: 1, 
-      }, true);
-      if(checkEmpty(devs.version)){
-        devs.version = 'other';
-      }
-=======
-    const realm = new Realm({
-      schema: [
-        OsmometerSchema,
-      ],
-    });
-    realm.write(() => {
-      
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
-    });
+    });  
+    
+    console.log(`打开realm成功！`);
     return Promise.resolve(realm);
   } catch (err) {
     console.log(`打开realm失败 ${err}`);

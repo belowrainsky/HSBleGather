@@ -43,7 +43,6 @@ export const requestLocationPermission = async () => {
     console.warn(err);
   }
 }
-<<<<<<< HEAD
 
 export const requestMultiplePermission = async () => {
   try {
@@ -82,5 +81,3 @@ export const requestMultiplePermission = async () => {
       console.warn(err.toString());
   }
 }
-=======
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
