@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React from 'react';
 import {
   View, 
@@ -30,7 +29,7 @@ import { connect } from 'react-redux';
 import styles from "./styles";
 import { Buffer } from 'buffer';
 import openRealm from '../../lib/realmStorage';
-// import moment from 'moment';
+import moment from 'moment';
 import {
   disconnectDevice,
 } from '../../actions/bleAction';
@@ -67,7 +66,7 @@ class ManualGather extends React.Component {
 		if (this.props.connectedDevice) {
 	      HSBleManager.negotiateMtu().then( () => {
 	        HSBleManager.monitor(this.monitorListener);	             
-	    	});
+	      });
 	  	}
 	  	this.onDisconnect();	  	 
 	}
@@ -89,18 +88,18 @@ class ManualGather extends React.Component {
   	}
 
 	componentDidMount() {
+		openRealm().then((realm) => {		      	
+			    this.setState({ realm: realm });
+		}); 
+
 		if (!this.props.connectedDevice) {
 	      this.showAlert();
 	    } 
-	    else {		
+	    else {			    	
+
 			HSBleManager.negotiateMtu().then(() => {
 	        	HSBleManager.write(parseBuffer.awakeDevice(), 2);
-	        });  
-	        openRealm().then((realm) => {
-		      	const devs = realm.objects('devsVersion').filtered('id == 1')[0];
-		      	this.setState({ version: devs.version, realm: realm });
-	      	}); 
-	      	console.log(`版本是：${this.state.version}`); 	
+	        });  	        	      
 
 	      	if(this.props.connectedDevice) {
 	      		const deviceType = this.props.connectedDevice.name.toString().substring(2, 4);
@@ -157,7 +156,7 @@ class ManualGather extends React.Component {
 	      }
 	    } else {
 	    	const buffer = Buffer.from(characteristic.value, 'base64');
-      		// const result = parseBuffer.push(buffer, false);
+      		// const result = parseBuffer.push(buffer);
       		const result = parseBuffer.push2parse(buffer);
       		
       		let cacheBuffer = Buffer.alloc(0); // 暂存数据
@@ -330,29 +329,56 @@ class ManualGather extends React.Component {
 		this.judgeCurrVersion();
 	}
 
-	writeToRealm(channelNo, t, fre, mod) {
-		// let Osmometer;
-		const date = new Date();
-		this.state.realm.write(() => {			
-			const Id = date.getTime();
-			const collectAt = this.state.collectAt;			
-			Osmometer = this.state.realm.create('Osmometer', {				
-				collectAt: collectAt,
-				temperature: t,
-				frequency: fre,
-				mod: mod,
-				channelNo: channelNo,
-				Id: Id, 
-			});				
-		});
-	}
+	// writeToRealm(channelNo, t, fre, mod) {
+	// 	// let Osmometer;
+	// 	const date = new Date();
+	// 	this.state.realm.write(() => {			
+	// 		const Id = date.getTime();
+	// 		const collectAt = this.state.collectAt;			
+	// 		Osmometer = this.state.realm.create('Osmometer', {				
+	// 			collectAt: collectAt,
+	// 			temperature: t,
+	// 			frequency: fre,
+	// 			mod: mod,
+	// 			channelNo: channelNo,
+	// 			Id: Id, 
+	// 		});				
+	// 	});
+	// 	if(this.state.version === 'other') {
+	// 		this.state.realm.write(() => {			
+	// 			const Id = date.getTime();
+	// 			const collectAt = this.state.collectAt;			
+	// 			Osmometer = this.state.realm.create('VibrateVersion', {				
+	// 				collectAt: collectAt,
+	// 				temperature: t,
+	// 				frequency: fre,
+	// 				mod: mod,
+	// 				channelNo: channelNo,
+	// 				Id: Id, 
+	// 			});				
+	// 		});
+	// 	}else if(this.state.version == 'version') {
+	// 		this.state.realm.write(() => {			
+	// 			const Id = date.getTime();
+	// 			const collectAt = this.state.collectAt;			
+	// 			Osmometer = this.state.realm.create('CurrentVersion', {				
+	// 				collectAt: collectAt,
+	// 				temperature: t,
+	// 				frequency: fre,
+	// 				mod: mod,
+	// 				channelNo: channelNo,
+	// 				Id: Id, 
+	// 			});				
+	// 		});
+	// 	}
+	// }
 
 	async save() {
 		if(this.state.collectAt === '') {
 			this.showToast('还没有收到数据！');
 			return;
 		}
-		try{						
+		try{									
 			const {fre1, fre2, fre3, fre4} = this.state.frequency;
 			const {mod1, mod2, mod3, mod4} = this.state.mod;
 			const {t1, t2, t3, t4} = this.state.temperature;		
@@ -376,14 +402,47 @@ class ManualGather extends React.Component {
 			rowData = {channelNo: 4, t: t4, fre: fre4, mod: mod4, collectAt: collectedAtString};
 			filepath = await append2ChannnFile(filename, rowData);	
 
+			// //写入realm数据库中
+			// this.writeToRealm(1, t1, fre1, mod1, Osmometer);						
+			// this.writeToRealm(2, t2, fre2, mod2, Osmometer);						
+			// this.writeToRealm(3, t3, fre3, mod3, Osmometer);						
+			// this.writeToRealm(4, t4, fre4, mod4, Osmometer);	
+
 			//写入realm数据库中
-			this.writeToRealm(1, t1, fre1, mod1, Osmometer);						
-			this.writeToRealm(2, t2, fre2, mod2, Osmometer);						
-			this.writeToRealm(3, t3, fre3, mod3, Osmometer);						
-			this.writeToRealm(4, t4, fre4, mod4, Osmometer);							
+			openRealm().then((realm) => {		      	
+				this.setState({ realm: realm });
+			});
+			const realm = this.state.realm;
+			const sysTime = moment(this.state.collectAt).toDate();			
+			console.log(`转成时间：${sysTime}`);
+			const now = new Date();
+			console.log(`当前时间：${now}`);
 			
-			Toast.show({ text: `保存成功 ${filepath}`, type: 'success' });
-			// Toast.show({ text: `保存成功`, type: 'success' });
+			realm.write(() => {
+				const id = new Date().getTime();
+				if(this.state.version === 'current') {
+					Osmometer = realm.create('OsmometerCurrent', {id, sysTime, sn});
+					for (let i = 0; i < 4; i++) {
+						Osmometer.currentArr.push({
+							channelNo: this.state.channData2table[i][0],
+							current: this.state.channData2table[i][2],
+							waterLevel: this.state.channData2table[i][3],
+						});
+					}
+				}else if(this.state.version === 'other') {
+					Osmometer = realm.create('OsmometerVibrate', {id, sysTime, sn});
+					for (let i = 0; i < 4; i++) {
+						Osmometer.vibrateArr.push({
+							channelNo: this.state.channData2table[i][0],
+							frequency: this.state.channData2table[i][2],
+							mode: this.state.channData2table[i][3],
+							temperature: this.state.channData2table[i][4],
+						});
+					}
+				}				
+			});
+
+			Toast.show({ text: `保存成功 ${filepath}`, type: 'success' });			
 		}catch(err){
 			Toast.show({ text: `数据保存失败 ${err}`, type: 'danger' });
 		}
@@ -574,348 +633,3 @@ export default connect(mapStateToProps, mapDispatchToProps)(ManualGather);
 // 	<Text style={{fontSize: 36, color: 'white'}}>保存</Text>
 // </Button>
 // </View>
-=======
-import React from 'react';
-import {
-  View, 
-  Text,
-  Alert,
-  TextInput,
-} from 'react-native';
-
-import {
-  Container,
-  Header,
-  Title,
-  Content,
-  Button,
-  Icon,
-  Left,
-  Right,
-  Body,
-  ListItem,
-  Toast,
-  Input,  
-  Separator,
-} from 'native-base';
-
-<<<<<<< HEAD
-import { NavigationEvents } from 'react-navigation';
-=======
-import { NavigationEvents, withNavigationFocus  } from 'react-navigation';
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-import parseBuffer from '../../lib/parseBuffer';
-import { connect } from 'react-redux';
-import styles from "./styles";
-import { Buffer } from 'buffer';
-import openRealm from '../../lib/realmStorage';
-import moment from 'moment';
-<<<<<<< HEAD
-import {
-  disconnectDevice,
-} from '../../actions/bleAction';
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-
-let HSBleManager;
-
-class ManualGather extends React.Component {
-
-	constructor(props){
-		super(props);
-		this.state = {
-			realm: null,
-			collectAt: null,
-			frequency: null,
-			mod:null,
-			temperature:null,
-			channel: [],			
-		};
-		HSBleManager = global.HSBleManager;
-<<<<<<< HEAD
-	}
-
-	didFocus(){
-		this.onDisconnect();
-	}
-
-	// 监听蓝牙断开
-  	onDisconnect() {
-      this.disconnectListener = HSBleManager.manager.onDeviceDisconnected(HSBleManager.peripheralId, (err, device) => {
-	      if (err) {             
-	        this.props.disconnectDevice();     
-	        this.showToast('设备不正常断开蓝牙');           
-	        console.log('设备断开蓝牙-手动页面-err0', err);		
-	      }else{
-	        this.props.disconnectDevice();  
-	        this.showToast('设备断开蓝牙');                   
-	        console.log('设备断开蓝牙-手动页面-noErr0', device.id, device.name);
-	      }      
-      });
-  	}
-
-=======
-
-		const didFocusSubscription = this.props.navigation.addListener(
-			'didFocus'	,
-			payload => {
-				console.debug('didFocus', payload);
-			}
-		);
-	}
-
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-	componentDidMount() {
-		if (!this.props.connectedDevice) {
-	      Alert.alert(
-	        '提示',
-	        '蓝牙未连接测斜仪，请先设置',
-	        [
-	          {text: '设置', onPress: () => this.props.navigation.navigate('ManualConnect')},
-	        ],
-	      );
-	    } else {
-	      HSBleManager.negotiateMtu().then(() => {
-	        HSBleManager.monitor(this.monitorListener)
-	      });
-	    }
-<<<<<<< HEAD
-	}	
-=======
-	}
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-
-	monitorListener = (err, characteristic) => {
-	    if (err) {
-	      console.log(err);
-	      switch (err.errorCode) {
-	        case 201:
-	          this.showToast('监听失败 设备已断开');
-<<<<<<< HEAD
-	          this.props.disconnectDevice();
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-	          break;
-	        case 205:
-	          this.showToast('监听失败 设备未连接');
-	          break;
-	        default:
-	          this.showToast(`监听失败 ${err.errorCode}`);
-	      }
-	    } else {
-<<<<<<< HEAD
-	    	// const buffer = Buffer.from(characteristic.value, 'base64');
-      // 		const result = parseBuffer.push(buffer);
-      // 		if (result) {
-      // 			console.log(`收到数据为：${result}`);
-      // 		}
-	    }
-	}
-
-	showToast(text, position = 'bottom', duration = 2000) {
-    	Toast.show({ text, position, duration });
-  	}
-
-	componentWillUnmount() {
-		HSBleManager.unmonitor();
-		this.disconnectListener && this.disconnectListener.remove();
-		this.setState = (state, callback) => {
-      		return;
-   		};	
-	}
-
-	getData() {		
-		if(!this.props.connectedDevice){
-			this.showToast('设备断开蓝牙');
-			return;
-		}
-		
-		HSBleManager.negotiateMtu().then(() => {
-	        HSBleManager.write(parseBuffer.awakeDevice(), 2);	        
-=======
-	    	const buffer = Buffer.from(characteristic.value, 'base64');
-      		const result = parseBuffer.push(buffer);
-      		if (result) {
-      			console.log(`收到数据为：${result}`);
-      		}
-	    }
-	}
-
-	componentWillUnmount() {
-		HSBleManager.unmonitor();
-		this.setState = (state, callback) => {
-      		return;
-   		 };	
-	}
-
-	getData() {
-		HSBleManager.negotiateMtu().then(() => {
-	        HSBleManager.write(parseBuffer.awake(), 2);
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-	        HSBleManager.read();
-	        HSBleManager.write(parseBuffer.updateData(), 2);
-	        HSBleManager.read();
-	    });
-	}
-
-	async save() {
-		try{
-
-		}catch(err){
-
-		}
-	}
-	
-	render(){
-		return(
-			<Container>
-<<<<<<< HEAD
-				<NavigationEvents
-          			onDidFocus={() => this.didFocus()}         
-        		/>
-=======
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
-				<Header>
-					<Left style={{flex: 1}}>
-						<Button transparent onPress={() => this.props.navigation.goBack()}>	
-							<Icon name='arrow-back'/>
-						</Button>
-					</Left>
-					<Body style={{flex:2, alignItems: 'center'}}>
-						<Title>手动获取信息</Title>
-					</Body>
-					<Right style={{flex:1}}/>									
-				</Header>			
-
-				<Content>
-					<Separator bordered>
-						<Text>通道1</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<Separator bordered>
-						<Text>通道2</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<Separator bordered>
-						<Text>通道3</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<Separator bordered>
-						<Text>通道4</Text>
-					</Separator>
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>时间：</Text>
-							<Text style={{flex: 1}}>{this.state.collectAt}</Text>
-
-							<Text style={{flex: 1}}>频率：</Text>
-							<Text style={{flex: 1}}>{this.state.frequency}</Text>
-						</View>
-					</ListItem>
-
-					<ListItem style={styles.listItem}>						
-						<View style={styles.recordField}>
-							<Text style={{flex: 1}}>频模：</Text>
-							<Text style={{flex: 1}}>{this.state.mod}</Text>
-
-							<Text style={{flex: 1}}>温度：</Text>
-							<Text style={{flex: 1}}>{this.state.temperature}</Text>
-						</View>
-					</ListItem>
-
-					<View style={{flex: 1, flexDirection:'row', justifyContent: 'center', marginTop: 20}}>
-						<Button primary block
-							style={{height: 50, width:280, marginLeft: 5, marginRight: 5}}
-							onPress={ () => this.getData() }
-							>
-							<Text style={{fontSize: 36, color: 'white'}}>采集</Text>
-						</Button>
-
-						<Button success block
-							style={{height: 50, width:280, marginLeft: 5, marginRight: 5}}
-							onPress={() => this.save()}>							
-							<Text style={{fontSize: 36, color: 'white'}}>保存</Text>
-						</Button>
-					</View>
-				</Content>				
-			</Container>
-		);		
-	}
-}
-
-const mapStateToProps = (state) => {
-  return {
-    connectedDevice: state.bles.connectedDevice,
-  };
-};
-<<<<<<< HEAD
-const mapDispatchToProps = (dispatch) => {
-  return {       
-    disconnectDevice: () => dispatch(disconnectDevice()),
-  };
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(ManualGather);
-=======
-
-
-export default connect(mapStateToProps, null)(ManualGather);
->>>>>>> 78260a6ba4a41d74db2a713748a74ebf695cabc7
->>>>>>> 17118f8b7c762a29eaadd552e1aef944b3b5d271
