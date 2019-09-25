@@ -54,7 +54,7 @@ class ManualGather extends React.Component {
 			isCurrentVersion: false,
 			isWakeup: false,
 
-			dataText: '',
+			// dataText: '',
 			channData2table:[],//表格行数据
 			devsVersion: null,
 			version: 'other',
@@ -115,17 +115,13 @@ class ManualGather extends React.Component {
 
 	judgeCurrVersion(){
 		try{
-			if(this.state.isWakeup){
-				HSBleManager.write(parseBuffer.getChannData(), 2);
-			}else{
-				HSBleManager.negotiateMtu().then(() => {
-			        HSBleManager.write(parseBuffer.awakeDevice(), 2);	        
-			        	        
-			        this.getChannDataTimer = setTimeout(() => {
-				      HSBleManager.write(parseBuffer.getChannData(), 2);
-				      }, 1000);
-		    	});
-			}		
+			HSBleManager.negotiateMtu().then(() => {
+		        HSBleManager.write(parseBuffer.awakeDevice(), 2);	        
+		        	        
+		        this.getChannDataTimer = setTimeout(() => {
+			      HSBleManager.write(parseBuffer.getChannData(), 2);
+			      }, 1000);
+	    	});		
 			this.setState({ isTapGather: true });		    
 		}catch(err) {
 			this.showToast('设备已断开,请重新连接');
@@ -136,7 +132,7 @@ class ManualGather extends React.Component {
 
 	consoleBuffer(b, title = '') {	  
 	  const string = Array.from(b).map(byte => byte.toString(16)).join(' ');
-	  console.log(`${title}Buffer ${string}`);
+	  // console.log(`${title}Buffer ${string}`);
 	  this.setState({dataText: this.state.dataText+string+'\n'});
 	}
 
@@ -159,9 +155,9 @@ class ManualGather extends React.Component {
       		// const result = parseBuffer.push(buffer);
       		const result = parseBuffer.push2parse(buffer);
       		
-      		let cacheBuffer = Buffer.alloc(0); // 暂存数据
-      		cacheBuffer = Buffer.concat([cacheBuffer, buffer]);
-      		this.consoleBuffer(cacheBuffer, '接收');		
+      		// let cacheBuffer = Buffer.alloc(0); // 暂存数据
+      		// cacheBuffer = Buffer.concat([cacheBuffer, buffer]);
+      		// this.consoleBuffer(cacheBuffer, '接收');		
    	      		    	 
 			if(result) {
 				if(result.sn){
@@ -195,9 +191,10 @@ class ManualGather extends React.Component {
       				});
       				for(let index = 0; index < 4; index++) {		      				
       					const singleData = [index+1, systemTime, fre[index], mode[index], celsius[index]];		      				
-	      				this.state.channData2table.push(singleData);
-	      				this.setState({ channData2table: this.state.channData2table });	      				  					      					
+	      				// this.state.channData2table.push(singleData);
+	      				this.state.channData2table[index] = singleData; 					      				  					      				
 	      			}
+	      			this.setState({ channData2table: this.state.channData2table });
 	      		}
 	      		else if( result.current && result.SysTime ){//电流版本
 	      			const systemTime = result.SysTime;
@@ -213,9 +210,10 @@ class ManualGather extends React.Component {
       				});	
       				for(let index = 0; index < currValue.length; index++) {		      				
       					const singleData = [index+1, systemTime, currValue[index], waterLevel[index]];		      				
-	      				this.state.channData2table.push(singleData);
-	      				this.setState({ channData2table: this.state.channData2table });	      								      					
+	      				// this.state.channData2table.push(singleData);
+	      				this.state.channData2table[index] = singleData;	      					      								      				
 	      			}
+	      			this.setState({ channData2table: this.state.channData2table });
 	      		}
 
 				// if(result.SysTime){
@@ -275,7 +273,7 @@ class ManualGather extends React.Component {
 		let freModes=[];
 		for (let i =0; i<valueArray.length; i++){
 			const value = (valueArray[i] ** 2) / 1000;
-			freModes[i] = Math.round(value*100)/100;
+			freModes[i] = Math.round(value*100) / 100;
 		}
 		return freModes;
 	}
@@ -476,7 +474,7 @@ class ManualGather extends React.Component {
 					<Right style={{flex:1}}>
 						<Button transparent>
 	  						{this.state.isTapGather === true ? <ActivityIndicator size="small" color="#fff"/>
-							  : <Text style={{color: "#fff"}}>可采集</Text>}
+							  : null}
 						</Button>
 					</Right>
 				</Header>			
@@ -505,13 +503,14 @@ class ManualGather extends React.Component {
 							onPress={() => this.save()}>							
 							<Text style={{fontSize: 36, color: 'white'}}>保存</Text>
 						</Button>
-				    </ListItem>					
-					<Text>{this.state.dataText}</Text>									
+				    </ListItem>																		
 				</Content>				
 			</Container>
 		);		
 	}
 }
+
+//<Text>{this.state.dataText}</Text>
 
 const mapStateToProps = (state) => {
   return {

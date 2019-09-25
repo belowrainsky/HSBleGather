@@ -168,7 +168,7 @@ class QRCodeConnect extends React.Component {
           {
             text: '确定',
             onPress: () => {
-              this.props.navigation.navigate('Holes')
+              this.props.navigation.navigate('Home')
             },
           },
         ],

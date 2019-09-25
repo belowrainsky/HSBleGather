@@ -30,6 +30,7 @@ export default {
   itemConnecting: {
     color: 'limegreen',
     fontSize: 20,
+    flex: 2,
   },
   subtitle: {
     marginLeft: 10,

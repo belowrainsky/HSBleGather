@@ -49,10 +49,27 @@ function push2parse(b) {
   
   console.log(`开始index=${startIndex}, 结束index+2=${endIndex+2}`);  
 
-  let productType, isOsometer;
-  if(startIndex !== -1 && endIndex !== -1){    
-    productType = cacheBuffer.slice(3, 5);
-    isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+  let productType;
+  let isOsometer = false;
+  let feCount;
+  if(startIndex !== -1){
+    while(!isOsometer && startIndex < endIndex) {
+      let hdaData = cacheBuffer.slice(startIndex, endIndex + 2);
+      productType = hdaData.slice(3, 5);
+      isOsometer = productType.equals(Buffer.from([0x04, 0x00]));  
+      if(!isOsometer){
+        startIndex = cacheBuffer.indexOf(Buffer.from([0xfe]), startIndex);    
+        feCount++;    
+      }else{
+        isOsometer = true;
+        break;
+      }
+      if(feCount > 10){
+        this.showToast("找了10次，还没找到正确的fe开头数据");
+        break;
+      }
+    }
+    
     productType = productType.readUInt8(0);
     console.log(`产品类型值 = ${productType}, 是否是渗压计: ${isOsometer}`);
   } 
@@ -73,38 +90,36 @@ function push2parse(b) {
       Object.assign(result, parseData(data));
     } else {
       consoleBuffer(check, '校验异常');
-      string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');                  
-    }
+      string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');    
 
-    let count = 0;
-    while(!checkByte.equals(check)) {            
+      let count = 0;
+      while(!checkByte.equals(check)) {            
+        const nextIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), endIndex);
+        console.log(`nextIndex=${nextIndex}, endIndex=${endIndex}`);
 
-      const nextIndex = cacheBuffer.indexOf(Buffer.from([0x0d, 0x0a]), endIndex);
-      console.log(`nextIndex=${nextIndex}, endIndex=${endIndex}`);
-
-      if(nextIndex !== -1) {
-        entry = cacheBuffer.slice(startIndex, nextIndex + 2);
-        data = entry.slice(1, -3);
-        check = xor(data);
-        checkByte = entry.slice(-3, -2);        
-        consoleBuffer(check, '校验值应该是：');
-        consoleBuffer(checkByte, '而字段校验值');        
-        if(checkByte.equals(check))
-        {          
-          endIndex += nextIndex;
-          break;
-        } else {
-          endIndex += nextIndex;
+        if(nextIndex !== -1) {
+          entry = cacheBuffer.slice(startIndex, nextIndex + 2);
+          data = entry.slice(1, -3);
+          check = xor(data);
+          checkByte = entry.slice(-3, -2);        
+          consoleBuffer(check, '校验值应该是：');
+          consoleBuffer(checkByte, '而字段校验值');        
+          if(checkByte.equals(check))
+          {          
+            endIndex = nextIndex;
+            break;
+          } else {
+            endIndex = nextIndex;
+          }
         }
-      }
-      if(count >= 10){
-        console.log(`count >= 10`);
-        showToast(`数据校验异常，请重新获取，数据=${string}`);
-        break;
-      }
-      count += 1;
-    }
-    console.log(`校验值异常次数：${count}`);
+        if(count >= 10){
+          console.log(`count >= 10`);
+          showToast(`数据校验异常，请重新获取，数据=${string}`);
+          break;
+        }
+        count += 1;
+      }              
+    }    
     
     if(checkByte.equals(check)){
       Object.assign(result, parseData(data));
@@ -157,12 +172,12 @@ function push(b) {
     const checkByte = entry.slice(-3, -2);
 
     if (checkByte.equals(check)) {      
-      // result = parseData(data);     
-      Object.assign(result, parseData(data));
+      result = parseData(data);     
+      // Object.assign(result, parseData(data));
     } else {
       consoleBuffer(check, '校验异常');
-      const string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');      
-      showToast(`数据校验异常，请重新获取，数据=${string}`);      
+      // const string = Array.from(cacheBuffer).map(byte => byte.toString(16)).join(' ');      
+      // showToast(`数据校验异常，请重新获取，数据=${string}`);      
     }
 
     cacheBuffer = cacheBuffer.slice(endIndex + 2);
@@ -196,11 +211,6 @@ function parseData(data) {
 };
 
 function productTypeMap(b) {
-  if (b.equals(Buffer.from([0x01, 0x00]))) return 'ADM';
-  if (b.equals(Buffer.from([0x02, 0x00]))) return 'RDM';
-  if (b.equals(Buffer.from([0x02, 0x01]))) return 'RDM355';
-  if (b.equals(Buffer.from([0x02, 0x02]))) return 'RDM16475';
-  if (b.equals(Buffer.from([0x03, 0x00]))) return 'SDM';
   if (b.equals(Buffer.from([0x04, 0x00]))) return 'Osmometer';
   // throw new Error('无效产品类型');
   showToast('无效产品类型');
@@ -288,10 +298,10 @@ function fieldValueMap(field, fieldLength, value) {
 
   if(field.equals(Buffer.from([0x20])))//多个频率
   {    
-    let channelFre_1 = value.readUIntBE(1, 4) / 100 ;
-    let channelFre_2 = value.readUIntBE(6, 4) / 100;
-    let channelFre_3 = value.readUIntBE(11, 4) / 100;
-    let channelFre_4 = value.readUIntBE(16, 4) / 100;
+    let channelFre_1 = value.readUIntBE(1, 4) / 10 ;
+    let channelFre_2 = value.readUIntBE(6, 4) / 10;
+    let channelFre_3 = value.readUIntBE(11, 4) / 10;
+    let channelFre_4 = value.readUIntBE(16, 4) / 10;
     
     const channelsFre = [channelFre_1, channelFre_2, channelFre_3, channelFre_4];    
     return {
@@ -378,7 +388,64 @@ function fieldValueMap(field, fieldLength, value) {
     return {
       modelStatus: modelSta,  //模块状态
     };
-  }  
+  }
+
+  if(field.equals(Buffer.from([0xB5]))) 
+  {
+    const inspireWay = value.readUIntBE(1, 2); 
+    const lowFre = value.readUIntBE(4, 2);
+    const highFre = value.readUIntBE(7, 2);
+    const themistorBValue = value.readUIntBE(10, 2);
+    const exThemistorValue = value.readUIntBE(13, 1);
+    console.log(`激励方法：${inspireWay}, 起始频率：${lowFre},  终止频率：${highFre}, B值：${themistorBValue}, 电阻值：${exThemistorValue}`);
+    return{
+      inspireWay: inspireWay,
+      lowFre: lowFre,
+      highFre: highFre,
+      themistorBValue: themistorBValue,
+      exThemistorValue: exThemistorValue,
+    };
+  }
+
+// //激励方法
+//   if(field.equals(Buffer.from([0x0A]))) {
+//     const inspireWay = value.readUIntBE(0, 2);
+//     return {
+//       inspireWay: inspire,
+//     };
+//   }
+
+// //起始频率
+//   if(field.equals(Buffer.from([0x0F]))) {
+//     const lowFre = value.readUIntBE(0, 2);
+//     return {
+//       lowFre: lowFre,
+//     };
+//   }
+
+// //终止频率
+//   if(field.equals(Buffer.from([0x10]))) {
+//     const highFre = value.readUIntBE(0, 2);
+//     return {
+//       highFre: highFre,
+//     };
+//   }
+
+// //热敏电阻B值
+//   if(field.equals(Buffer.from([0x1A]))) {
+//     const themistorBValue = value.readUIntBE(0, 2);
+//     return {
+//       themistorBValue: themistorBValue,
+//     };
+//   }
+
+// //热敏电阻标称电阻值C
+//   if(field.equals(Buffer.from([0x1C]))) {
+//     const exThemistorValue = value.readUIntBE(0, 2);
+//     return {
+//       exThemistorValue: exThemistorValue,
+//     };
+//   }
 
   console.log('错误的字段或未设置的字段');
   return {};  
@@ -396,7 +463,7 @@ function wrapPayload(payload) {
 //设备-系统 信息 页面的获取
 function getOsmometerMsg()
 {  
-  let snCmd = [0x00, 0x00, 0x00, 0x00, 0xe0, 0x00];
+  let snCmd = [0x00, 0x00, 0x00, 0x00, 0xef, 0x04, 0x00, 0x00, 0x00, 0x03, 0xe0, 0x00];
   let voltCmd = [0x02, 0x00];
   let systimeCmd = [0xe2, 0x00];
   let freCmd = [0xe5, 0x00];
@@ -421,7 +488,7 @@ function versionPacket() {
 
 //唤醒设备
 function awakeDevice() {
-  const cmd = Buffer.from([0x00, 0x02, 0x00, 0x01, 0x03, 0x01, 0x11]);
+  const cmd = Buffer.from([0x00, 0x02, 0x00, 0x01, 0xef, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x01, 0x11]);  
   return wrapPayload(cmd);
 }
 
@@ -439,7 +506,7 @@ function getVolt() {
 
 //设置时间
 function setSysTime(datetime) {
-  let cmm = [0x00, 0x05, 0x00, 0x01, 0xe2, 0x08];
+  let cmm = [0x00, 0x05, 0x00, 0x01, 0xef, 0x04, 0x00, 0x00, 0x00, 0x07, 0xe2, 0x08];
   cmm.push(datetime[0], datetime[1], datetime[2], datetime[3], datetime[4], datetime[5], 0x00, 0x00);    
   const cmd = Buffer.from(cmm);
   return wrapPayload(cmd);
@@ -447,7 +514,7 @@ function setSysTime(datetime) {
 
 //设置频率
 function setFrequency(fre) {
-  let cmm = [0x00, 0x08, 0x00, 0x01, 0xe5, 0x02];
+  let cmm = [0x00, 0x08, 0x00, 0x01, 0xef, 0x04, 0x00, 0x00, 0x00, 0x04, 0xe5, 0x02];
   cmm.push(fre[0], fre[1]);  
   let cmd = Buffer.from(cmm); 
   console.log(`设置频率： ${cmm.toString()}`);   
@@ -480,13 +547,13 @@ function getFrequency() {
 
 //获取当前4个通道的数据
 function getChannData(){
-  const cmd = Buffer.from([0x00, 0x09, 0x00, 0x00, 0xd4, 0x00]);
+  const cmd = Buffer.from([0x00, 0x09, 0x00, 0x00, 0xef, 0x04, 0x00, 0x00, 0x00, 0x05, 0xd4, 0x00]);
   return wrapPayload(cmd);  
 }
 
 //获取时间段内的时间
 function getHistoryData(beginDatetime, endDatetime) {
-  let comm = [0x00, 0x0A, 0x00, 0x00, 0xd3, 0x0C];
+  let comm = [0x00, 0x0A, 0x00, 0x00, 0xef, 0x04, 0x00, 0x00, 0x00, 0x06, 0xd3, 0x0C];
   comm.push(beginDatetime[0], beginDatetime[1], beginDatetime[2], beginDatetime[3], beginDatetime[4], beginDatetime[5]); 
   comm.push(endDatetime[0], endDatetime[1], endDatetime[2], endDatetime[3], endDatetime[4], endDatetime[5]);  
   // comm.push(0x00, 0x01, 0x02, 0x15, 0x14, 0x00,  0x00, 0x01, 0x04, 0x01, 0x01, 0x00);  
@@ -504,6 +571,25 @@ function getDTUCSQ_Data() {
 function getCurSaveData() {
   const cmd = Buffer.from([0x00, 0x0C, 0x00, 0x00, 0xD2, 0x00]);
   return wrapPayload(cmd); 
+}
+//获取振弦模块参数
+function getVibrateParas()
+{
+  const cmd = Buffer.from([0x00, 0x0D, 0x00, 0x00, 0xef, 0x04, 0x00, 0x00, 0x00, 0x02, 0xB5, 0x00]);
+  return wrapPayload(cmd); 
+}
+
+function setVibrateParas(value) {
+  let cmdArr = [0x00, 0x0D, 0x00, 0x01, 0xef, 0x04, 0x00, 0x00, 0x00, 0x01, 0xB5, 0x0f];
+  cmdArr.push(0x0A, 0x00, value[0]);//inspire激励方法
+  cmdArr.push(0x0F, value[1], value[2]);//起始频率
+  cmdArr.push(0x10, value[3], value[4]);//终止频率
+  cmdArr.push(0x1A, value[5], value[6]);//电阻B值
+  cmdArr.push(0x1C, value[8], 0x02);//热敏电阻标称值
+
+  const cmd = Buffer.from(cmdArr);
+  console.log(`设置振弦参数：${cmd.toString()}`);
+  return wrapPayload(cmd);
 }
 
 //将时间日期转成十六进制数
@@ -551,5 +637,7 @@ export default {
   getOsmometerMsg,
 
   getCurSaveData,
+  getVibrateParas,
+  setVibrateParas,
 };
 

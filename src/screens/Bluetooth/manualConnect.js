@@ -165,13 +165,13 @@ class ManualConnect extends React.Component {
       if (err) {        
         this.props.disconnectDevice();        
         console.log('设备断开蓝牙-err0', err);		
+        this.props.clearDevice();
+        if (this.state.scaning) return;
+        this.scan();
       }else{
         this.props.disconnectDevice();             
         console.log('设备断开蓝牙-noErr0', device.id, device.name);
-      }    
-      this.props.clearDevice();
-      if (this.state.scaning) return;
-      this.scan();       
+      }                
     });
   }
 
@@ -196,37 +196,31 @@ class ManualConnect extends React.Component {
       </View>
     );
   }
-
+//        <Left style={{flex:1}}>
+          // <Icon name="bluetooth" style={{width: 25}} />          
+        // </Left>
   _renderItem = ({ item, index }) => {
     return (
-      <ListItem>
+      <ListItem avatar>
       <TouchableOpacity
         onPress={() => this.connect({ item, index })}
         style={styles.itemContainer}>
-        <View style={{flexDirection: 'row'}}>
-          <Icon name="bluetooth" style={{width: 25}} />
-          <Text style={styles.itemName}>{item.name ? item.name : item.id}</Text>
-        </View>
-        <Text style={styles.itemConnecting}>
-          {
-            item.id === this.state.connectingId
-            ? '正在连接...' : ''
-          }
-        </Text>
+        
+        <Body style={{flex:4}}>
+          <Text style={styles.itemName}>{item.name ? item.name : 'null'}</Text>
+          <Text>{item.id}</Text>
+        </Body>
+        
+          <Text style={styles.itemConnecting}>
+            {
+              item.id === this.state.connectingId
+              ? '正在连接...' : ''
+            } 
+          </Text>              
       </TouchableOpacity>
       </ListItem>
     );
   }
-
-  // write2Realm(devType) {
-  //   const realm = this.state.realm;
-  //   realm.write( () => {
-  //       realm.create('devsVersion', {
-  //         version: devType,
-  //         id: 1,
-  //       });
-  //   } );
-  // }
 
   _renderConnectedDevice = () => {
     if (this.props.connectedDevice) {

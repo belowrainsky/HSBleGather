@@ -10,7 +10,7 @@ const setMsgSchema = {
     volt: 'double?',    //电压
     gatherFunc: 'string',//采集功能
     DtuFunc: 'string',  //网络通信功能
-    Csq: 'int',      //网络通信质量
+    Csq: 'string',      //网络通信质量
     interval: 'int', //监测间隔
     intervalType: 'string',//分钟或小时
     time: 'string'      //系统时间    
